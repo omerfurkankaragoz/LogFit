@@ -7,7 +7,8 @@ import ProgressCharts from './components/ProgressCharts';
 import RoutinesList, { Routine } from './components/RoutinesList';
 import CreateRoutine from './components/CreateRoutine';
 import ExerciseLibrary from './components/ExerciseLibrary';
-import Auth from './components/Auth'; // Auth bileşenini import ediyoruz
+import Auth from './components/Auth';
+import Profile from './components/Profile'; // Profile bileşenini import ediyoruz
 import { supabase } from './services/supabaseClient';
 import { Session } from '@supabase/supabase-js';
 
@@ -19,12 +20,13 @@ export interface Exercise {
 }
 export interface Workout {
   id: string;
-  user_id: string; // user_id eklendi
+  user_id: string;
   date: string;
   exercises: Exercise[];
 }
 
-type View = 'calendar' | 'add' | 'details' | 'progress' | 'routines' | 'create_routine' | 'library';
+// View tipine 'profile' eklendi
+type View = 'calendar' | 'add' | 'details' | 'progress' | 'routines' | 'create_routine' | 'library' | 'profile';
 
 function App() {
   // State Yönetimi
@@ -36,9 +38,11 @@ function App() {
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [editingWorkout, setEditingWorkout] = useState<Workout | null>(null);
   const [editingRoutine, setEditingRoutine] = useState<Routine | null>(null);
+  const [previousView, setPreviousView] = useState<View>('calendar');
 
   // Kullanıcı oturumunu dinle
   useEffect(() => {
+    setLoading(true);
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setLoading(false);
@@ -78,6 +82,11 @@ function App() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSetView = (view: View) => {
+    setPreviousView(currentView);
+    setCurrentView(view);
   };
 
   // --- Veri Kaydetme / Güncelleme / Silme (user_id eklendi) ---
@@ -124,8 +133,8 @@ function App() {
   };
   
   const handleEditRoutine = (routine: Routine) => {
+    handleSetView('create_routine');
     setEditingRoutine(routine);
-    setCurrentView('create_routine');
   };
   
   const handleLogout = async () => {
@@ -137,7 +146,10 @@ function App() {
 
   // --- Sayfa Yönlendirme ve Render ---
 
-  // Giriş yapılmamışsa Auth bileşenini göster
+  if (loading) {
+    return <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex justify-center items-center"><div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div></div>;
+  }
+
   if (!session) {
     return <Auth />;
   }
@@ -150,15 +162,19 @@ function App() {
       progress: 'İstatistikler',
       routines: 'Rutinlerim',
       create_routine: editingRoutine ? 'Rutini Düzenle' : 'Yeni Rutin Oluştur',
-      library: 'Hareket Kütüphanesi'
+      library: 'Hareket Kütüphanesi',
+      profile: 'Profilim'
     };
+    
+    const isSubPage = !['calendar', 'routines', 'progress', 'library', 'profile'].includes(currentView);
+
     return (
       <header className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-4 shadow-lg">
         <div className="max-w-md mx-auto flex items-center justify-between">
           <div className="w-10">
-            {(currentView !== 'routines' && currentView !== 'calendar') && (
+            {isSubPage && (
               <button
-                onClick={() => setCurrentView(currentView === 'create_routine' ? 'routines' : 'calendar')}
+                onClick={() => setCurrentView(previousView)}
                 className="p-2 hover:bg-blue-800 rounded-full transition-colors"
               >
                 <ArrowLeft size={24} />
@@ -170,9 +186,11 @@ function App() {
             {titles[currentView]}
           </h1>
           <div className="w-10">
-            <button onClick={handleLogout} className="p-2 hover:bg-blue-800 rounded-full transition-colors">
-              <LogOut size={22} />
-            </button>
+            {currentView === 'profile' && (
+              <button onClick={handleLogout} className="p-2 hover:bg-blue-800 rounded-full transition-colors">
+                <LogOut size={22} />
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -180,15 +198,13 @@ function App() {
   };
 
   const renderContent = () => {
-    if (loading) {
-      return <div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div></div>;
-    }
-    
     switch (currentView) {
+      case 'profile':
+        return <Profile session={session} />;
       case 'routines':
         return <RoutinesList 
           routines={routines} 
-          onAddNewRoutine={() => { setEditingRoutine(null); setCurrentView('create_routine'); }}
+          onAddNewRoutine={() => { setEditingRoutine(null); handleSetView('create_routine'); }}
           onEditRoutine={handleEditRoutine}
           onDeleteRoutine={handleDeleteRoutine}
         />;
@@ -205,10 +221,10 @@ function App() {
             setSelectedDate(date);
             const workoutForDate = workouts.find(w => w.date === date);
             if (workoutForDate) {
-              setCurrentView('details');
+              handleSetView('details');
             } else {
               setEditingWorkout(null);
-              setCurrentView('add');
+              handleSetView('add');
             }
           }} 
         />;
@@ -227,7 +243,7 @@ function App() {
           workout={selectedWorkout}
           date={selectedDate}
           workouts={workouts}
-          onEdit={() => { setEditingWorkout(selectedWorkout); setCurrentView('add'); }}
+          onEdit={() => { setEditingWorkout(selectedWorkout); handleSetView('add'); }}
           onDelete={() => handleDeleteWorkout(selectedWorkout.id)}
           onUpdate={(id, data) => handleSaveWorkout({ id, ...data })}
         /> : null;
@@ -250,7 +266,7 @@ function App() {
                 };
                 setEditingWorkout(newWorkoutFromLibrary);
                 setSelectedDate(today);
-                setCurrentView('add');
+                handleSetView('add');
             }}
             onBack={() => setCurrentView('calendar')} 
         />;
@@ -259,25 +275,23 @@ function App() {
   };
 
   const renderBottomNav = () => {
+    const navItems = [
+      { view: 'calendar', icon: Calendar, label: 'Takvim' },
+      { view: 'routines', icon: Dumbbell, label: 'Rutinler' },
+      { view: 'library', icon: BookOpen, label: 'Kütüphane' },
+      { view: 'progress', icon: BarChart3, label: 'İstatistik' },
+      { view: 'profile', icon: User, label: 'Profil' }, // Profil butonu eklendi
+    ];
+
     return (
-      <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-lg">
+      <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-2 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] shadow-lg">
         <div className="max-w-md mx-auto flex justify-around">
-            <button onClick={() => setCurrentView('calendar')} className={`flex flex-col items-center gap-1 w-1/4 ${currentView === 'calendar' ? 'text-blue-500' : 'text-gray-600 dark:text-gray-300'}`}>
-                <Calendar size={24} />
-                <span className="text-xs">Takvim</span>
-            </button>
-            <button onClick={() => setCurrentView('routines')} className={`flex flex-col items-center gap-1 w-1/4 ${currentView === 'routines' ? 'text-blue-500' : 'text-gray-600 dark:text-gray-300'}`}>
-                <Dumbbell size={24} />
-                <span className="text-xs">Rutinler</span>
-            </button>
-            <button onClick={() => setCurrentView('library')} className={`flex flex-col items-center gap-1 w-1/4 ${currentView === 'library' ? 'text-blue-500' : 'text-gray-600 dark:text-gray-300'}`}>
-                <BookOpen size={24} />
-                <span className="text-xs">Kütüphane</span>
-            </button>
-            <button onClick={() => setCurrentView('progress')} className={`flex flex-col items-center gap-1 w-1/4 ${currentView === 'progress' ? 'text-blue-500' : 'text-gray-600 dark:text-gray-300'}`}>
-                <BarChart3 size={24} />
-                <span className="text-xs">İstatistik</span>
-            </button>
+            {navItems.map(item => (
+              <button key={item.view} onClick={() => setCurrentView(item.view as View)} className={`flex flex-col items-center gap-1 w-1/5 py-1 rounded-md ${currentView === item.view ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/50 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300'}`}>
+                  <item.icon size={24} />
+                  <span className="text-xs">{item.label}</span>
+              </button>
+            ))}
         </div>
       </nav>
     )
