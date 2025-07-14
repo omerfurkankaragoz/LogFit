@@ -5,7 +5,7 @@ import { Edit, Save, User } from 'lucide-react';
 
 interface ProfileProps {
   session: Session;
-}
+} 
 
 const Profile: React.FC<ProfileProps> = ({ session }) => {
   const [loading, setLoading] = useState(true);
