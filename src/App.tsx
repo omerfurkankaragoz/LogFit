@@ -5,7 +5,7 @@ import AddWorkout from './components/AddWorkout';
 import WorkoutDetails from './components/WorkoutDetails';
 import ProgressCharts from './components/ProgressCharts';
 import ExerciseLibrary from './components/ExerciseLibrary';
-import { supabase } from './services/supabaseClient'; // Supabase client'ı import ediyoruz
+import { supabase } from './services/supabaseClient';
 
 export interface Exercise {
   id: string;
@@ -17,7 +17,7 @@ export interface Exercise {
 }
 
 export interface Workout {
-  id: string; // Supabase'den gelen id'yi kullanacağız
+  id: string;
   date: string;
   exercises: Exercise[];
 }
@@ -29,68 +29,59 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [currentView, setCurrentView] = useState<View>('calendar');
   const [selectedDate, setSelectedDate] = useState<string>('');
+  const [editingWorkout, setEditingWorkout] = useState<Workout | null>(null);
 
-  // Verileri Supabase'den yükle
+
+  const fetchWorkouts = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('workouts')
+      .select('*')
+      .order('date', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching workouts:', error);
+    } else if (data) {
+      const formattedData: Workout[] = data.map((item: any) => ({
+        id: item.id.toString(),
+        date: item.date,
+        exercises: item.exercises,
+      }));
+      setWorkouts(formattedData);
+    }
+    setLoading(false);
+  };
+
   useEffect(() => {
-    const fetchWorkouts = async () => {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('workouts')
-        .select('*')
-        .order('date', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching workouts:', error);
-      } else if (data) {
-        // Gelen verinin formatı Workout arayüzüne uygun olmalı
-        const formattedData: Workout[] = data.map((item: any) => ({
-          id: item.id.toString(),
-          date: item.date,
-          exercises: item.exercises,
-        }));
-        setWorkouts(formattedData);
-      }
-      setLoading(false);
-    };
     fetchWorkouts();
   }, []);
-
 
   const addWorkout = async (workout: Omit<Workout, 'id'>) => {
     const { data, error } = await supabase
       .from('workouts')
       .insert([{ date: workout.date, exercises: workout.exercises }])
-      .select();
+      .select()
+      .single();
 
     if (error) {
       console.error('Error adding workout:', error);
     } else if (data) {
-        const newWorkout: Workout = {
-            id: data[0].id.toString(),
-            date: data[0].date,
-            exercises: data[0].exercises,
-        };
-      setWorkouts(prev => [newWorkout, ...prev]);
+      // Yeni eklenen antrenmanı state'e ekle
+      await fetchWorkouts(); // Veri tutarlılığı için listeyi yeniden çek
     }
   };
 
   const updateWorkout = async (workoutId: string, updatedWorkout: Omit<Workout, 'id'>) => {
-      const { data, error } = await supabase
-        .from('workouts')
-        .update({ date: updatedWorkout.date, exercises: updatedWorkout.exercises })
-        .eq('id', workoutId)
-        .select();
+    const { data, error } = await supabase
+      .from('workouts')
+      .update({ date: updatedWorkout.date, exercises: updatedWorkout.exercises })
+      .eq('id', workoutId)
+      .select();
 
-    if(error){
-        console.error('Error updating workout:', error);
-    } else if (data) {
-        setWorkouts(prev =>
-            prev.map(workout =>
-                workout.id === workoutId
-                ? { ...updatedWorkout, id: workoutId }
-                : workout
-            )
-        );
+    if (error) {
+      console.error('Error updating workout:', error);
+    } else {
+      await fetchWorkouts(); // Veri tutarlılığı için listeyi yeniden çek
     }
   };
 
@@ -109,17 +100,46 @@ function App() {
 
   const selectedWorkout = workouts.find(w => w.date === selectedDate);
 
+  const handleSaveWorkout = async (workoutData: Omit<Workout, 'id'>) => {
+    const existingWorkout = workouts.find(w => w.date === workoutData.date);
+    
+    if (editingWorkout) {
+        // Düzenleme modunda
+        await updateWorkout(editingWorkout.id, workoutData);
+        setEditingWorkout(null);
+    } else if (existingWorkout) {
+        // Aynı tarihte kayıt var, güncelle
+        await updateWorkout(existingWorkout.id, workoutData);
+    }
+    else {
+        // Yeni kayıt
+      await addWorkout(workoutData);
+    }
+    setCurrentView('calendar');
+  };
+
+  const handleEditWorkout = (workout: Workout) => {
+    setEditingWorkout(workout);
+    setSelectedDate(workout.date);
+    setCurrentView('add');
+  }
+
+  const handleCancelEdit = () => {
+    setEditingWorkout(null);
+    setCurrentView('calendar');
+  }
+
   const renderHeader = () => {
-    const titles = {
+    const titles: Record<View, string> = {
       calendar: 'Fitness Takip',
-      add: 'Antrenman Ekle',
+      add: editingWorkout ? 'Antrenman Düzenle' : 'Antrenman Ekle',
       details: 'Antrenman Detayı',
       progress: 'İlerleme Grafikleri',
       library: 'Hareket Kütüphanesi'
     };
 
     return (
-      <header className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 shadow-lg">
+      <header className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-4 shadow-lg">
         <div className="max-w-md mx-auto flex items-center justify-between">
           {currentView !== 'calendar' && (
             <button
@@ -140,7 +160,7 @@ function App() {
   };
 
   const renderContent = () => {
-    if (loading) {
+    if (loading && !workouts.length) {
         return (
           <div className="flex justify-center items-center h-64">
             <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div>
@@ -154,7 +174,12 @@ function App() {
             workouts={workouts}
             onDateSelect={(date) => {
               setSelectedDate(date);
-              setCurrentView('details');
+              const workoutForDate = workouts.find(w => w.date === date);
+              if (workoutForDate) {
+                setCurrentView('details');
+              } else {
+                setCurrentView('add');
+              }
             }}
           />
         );
@@ -162,11 +187,9 @@ function App() {
         return (
           <AddWorkout
             date={selectedDate}
-            onSave={(workout) => {
-              addWorkout(workout);
-              setCurrentView('calendar');
-            }}
-            onCancel={() => setCurrentView('calendar')}
+            existingWorkout={editingWorkout}
+            onSave={handleSaveWorkout}
+            onCancel={handleCancelEdit}
           />
         );
       case 'details':
@@ -175,10 +198,10 @@ function App() {
             workout={selectedWorkout}
             date={selectedDate}
             workouts={workouts}
-            onEdit={() => setCurrentView('add')}
-            onDelete={(id) => {
-              deleteWorkout(id);
-              setCurrentView('calendar');
+            onEdit={() => selectedWorkout && handleEditWorkout(selectedWorkout)}
+            onDelete={async (id) => { 
+              await deleteWorkout(id); 
+              setCurrentView('calendar'); 
             }}
             onUpdate={updateWorkout}
           />
@@ -188,9 +211,8 @@ function App() {
       case 'library':
         return (
           <ExerciseLibrary
-            onExerciseSelect={(exercise) => {
+            onExerciseSelect={async (exercise) => { 
               setSelectedDate(new Date().toISOString().split('T')[0]);
-              // Seçilen egzersizi kullanarak yeni antrenman oluştur
               const newWorkout: Omit<Workout, 'id'> = {
                 date: new Date().toISOString().split('T')[0],
                 exercises: [{
@@ -199,8 +221,7 @@ function App() {
                   sets: [{ reps: 0, weight: 0 }]
                 }]
               };
-              addWorkout(newWorkout);
-              setCurrentView('calendar');
+              await handleSaveWorkout(newWorkout); 
             }}
             onBack={() => setCurrentView('calendar')}
           />
@@ -214,7 +235,7 @@ function App() {
     if (currentView !== 'calendar') return null;
 
     return (
-      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4 shadow-lg">
+      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-lg">
         <div className="max-w-md mx-auto flex justify-center gap-4">
           <button
             onClick={() => {

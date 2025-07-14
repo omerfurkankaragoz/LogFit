@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Plus, ArrowLeft } from 'lucide-react';
+import { Search, Filter, Plus } from 'lucide-react';
 import { Exercise, getExercises, getExercisesByBodyPart, searchExercises, getBodyParts } from '../services/exerciseApi';
 
 interface ExerciseLibraryProps {
@@ -100,17 +100,6 @@ const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({ onExerciseSelect, onB
 
   return (
     <div className="p-4">
-      {/* Başlık */}
-      <div className="flex items-center gap-3 mb-6">
-        <button
-          onClick={onBack}
-          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
-        >
-          <ArrowLeft size={24} className="text-gray-800 dark:text-gray-200" />
-        </button>
-        <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200">Hareket Kütüphanesi</h2>
-      </div>
-
       {/* Arama ve Filtreler */}
       <div className="space-y-4 mb-6">
         {/* Arama */}
