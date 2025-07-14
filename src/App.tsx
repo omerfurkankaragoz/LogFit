@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Dumbbell, BarChart3, ArrowLeft, BookOpen } from 'lucide-react';
+import { Calendar, Dumbbell, BarChart3, ArrowLeft, BookOpen, LogOut, User } from 'lucide-react';
 import WorkoutCalendar from './components/WorkoutCalendar';
 import AddWorkout from './components/AddWorkout';
 import WorkoutDetails from './components/WorkoutDetails';
@@ -7,7 +7,9 @@ import ProgressCharts from './components/ProgressCharts';
 import RoutinesList, { Routine } from './components/RoutinesList';
 import CreateRoutine from './components/CreateRoutine';
 import ExerciseLibrary from './components/ExerciseLibrary';
+import Auth from './components/Auth'; // Auth bileşenini import ediyoruz
 import { supabase } from './services/supabaseClient';
+import { Session } from '@supabase/supabase-js';
 
 // Arayüzler (Interfaces)
 export interface Exercise {
@@ -17,6 +19,7 @@ export interface Exercise {
 }
 export interface Workout {
   id: string;
+  user_id: string; // user_id eklendi
   date: string;
   exercises: Exercise[];
 }
@@ -25,6 +28,7 @@ type View = 'calendar' | 'add' | 'details' | 'progress' | 'routines' | 'create_r
 
 function App() {
   // State Yönetimi
+  const [session, setSession] = useState<Session | null>(null);
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,13 +37,34 @@ function App() {
   const [editingWorkout, setEditingWorkout] = useState<Workout | null>(null);
   const [editingRoutine, setEditingRoutine] = useState<Routine | null>(null);
 
-  // Veri Çekme (getExercises çağrısı kaldırıldı)
+  // Kullanıcı oturumunu dinle
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Oturum açıldığında verileri çek
+  useEffect(() => {
+    if (session) {
+      fetchAllData();
+    }
+  }, [session]);
+
   const fetchAllData = async () => {
+    if (!session) return;
     setLoading(true);
     try {
       const [workoutsRes, routinesRes] = await Promise.all([
-        supabase.from('workouts').select('*').order('date', { ascending: false }),
-        supabase.from('routines').select('*').order('name'),
+        supabase.from('workouts').select('*').eq('user_id', session.user.id).order('date', { ascending: false }),
+        supabase.from('routines').select('*').eq('user_id', session.user.id).order('name'),
       ]);
       
       if (workoutsRes.error) throw workoutsRes.error;
@@ -55,27 +80,26 @@ function App() {
     }
   };
 
-  useEffect(() => {
-    fetchAllData();
-  }, []);
+  // --- Veri Kaydetme / Güncelleme / Silme (user_id eklendi) ---
 
-  // --- Veri Kaydetme / Güncelleme / Silme ---
-
-  const handleSaveWorkout = async (workoutData: Omit<Workout, 'id'|'created_at'>) => {
+  const handleSaveWorkout = async (workoutData: Omit<Workout, 'id' | 'created_at' | 'user_id'>) => {
+    if (!session) return;
     const workoutToUpdate = editingWorkout;
+    const workoutPayload = { ...workoutData, user_id: session.user.id };
+
     if (workoutToUpdate && workoutToUpdate.id !== 'new') {
-      await supabase.from('workouts').update({ exercises: workoutData.exercises }).eq('id', workoutToUpdate.id);
+      await supabase.from('workouts').update({ exercises: workoutPayload.exercises }).eq('id', workoutToUpdate.id);
     } else {
-      await supabase.from('workouts').insert([{ date: workoutData.date, exercises: workoutData.exercises }]);
+      await supabase.from('workouts').insert([workoutPayload]);
     }
     setEditingWorkout(null);
     await fetchAllData();
     setCurrentView('calendar');
   };
 
-  // DÜZELTME: Bu fonksiyon, artık CreateRoutine'den gelen doğru veri formatını ({id, name}[]) kabul ediyor.
   const handleSaveRoutine = async (id: string | null, name: string, exercises: { id: string; name: string }[]) => {
-    const routineData = { name, exercises }; // Gelen veri zaten doğru formatta
+    if (!session) return;
+    const routineData = { name, exercises, user_id: session.user.id };
     if (id) {
       await supabase.from('routines').update(routineData).eq('id', id);
     } else {
@@ -103,8 +127,20 @@ function App() {
     setEditingRoutine(routine);
     setCurrentView('create_routine');
   };
+  
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setWorkouts([]);
+    setRoutines([]);
+    setCurrentView('calendar');
+  };
 
   // --- Sayfa Yönlendirme ve Render ---
+
+  // Giriş yapılmamışsa Auth bileşenini göster
+  if (!session) {
+    return <Auth />;
+  }
 
   const renderHeader = () => {
     const titles: Record<View, string> = {
@@ -133,7 +169,11 @@ function App() {
             <Dumbbell size={24} />
             {titles[currentView]}
           </h1>
-          <div className="w-10" />
+          <div className="w-10">
+            <button onClick={handleLogout} className="p-2 hover:bg-blue-800 rounded-full transition-colors">
+              <LogOut size={22} />
+            </button>
+          </div>
         </div>
       </header>
     );
@@ -201,6 +241,7 @@ function App() {
                 const newWorkoutFromLibrary: Workout = {
                     id: 'new',
                     date: today,
+                    user_id: session?.user.id || '',
                     exercises: [{
                         id: Date.now().toString(),
                         name: exercise.name,
@@ -219,7 +260,7 @@ function App() {
 
   const renderBottomNav = () => {
     return (
-      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-lg">
+      <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-lg">
         <div className="max-w-md mx-auto flex justify-around">
             <button onClick={() => setCurrentView('calendar')} className={`flex flex-col items-center gap-1 w-1/4 ${currentView === 'calendar' ? 'text-blue-500' : 'text-gray-600 dark:text-gray-300'}`}>
                 <Calendar size={24} />
@@ -238,7 +279,7 @@ function App() {
                 <span className="text-xs">İstatistik</span>
             </button>
         </div>
-      </div>
+      </nav>
     )
   };
 
