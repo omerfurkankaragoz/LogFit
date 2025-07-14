@@ -1,28 +1,41 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Save } from 'lucide-react';
+import { Plus, Trash2, Save, BookCopy } from 'lucide-react';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { Exercise, Workout } from '../App';
+import { Routine } from './RoutinesList'; // RoutinesList'ten Routine arayüzünü import ediyoruz
 
 interface AddWorkoutProps {
   date: string;
   existingWorkout: Workout | null;
+  routines: Routine[]; // App.tsx'den gelen rutinler listesi
   onSave: (workout: Omit<Workout, 'id'>) => void;
   onCancel: () => void;
 }
 
-const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, onSave, onCancel }) => {
+const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines, onSave, onCancel }) => {
   const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [isRoutinePickerOpen, setRoutinePickerOpen] = useState(false);
 
   useEffect(() => {
-    // Düzenleme için mevcut bir antrenman varsa, onun verilerini yükle.
-    // Yoksa (yeni antrenman ekleniyorsa), egzersiz listesini boşalt.
     if (existingWorkout) {
       setExercises(existingWorkout.exercises);
     } else {
       setExercises([]);
     }
-  }, [existingWorkout]);
+  }, [existingWorkout, date]); // 'date' değişikliğini de dinle
+
+  // --- YENİ FONKSİYONLAR ---
+  const handleSelectRoutine = (routine: Routine) => {
+    const exercisesFromRoutine = routine.exercises.map(ex => ({
+      id: Date.now().toString() + ex.name,
+      name: ex.name,
+      sets: [{ reps: 0, weight: 0 }]
+    }));
+    setExercises(exercisesFromRoutine);
+    setRoutinePickerOpen(false);
+  };
+  // -------------------------
 
   const addExercise = () => {
     const newExercise: Exercise = {
@@ -38,111 +51,76 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, onSave, 
   };
 
   const updateExerciseName = (exerciseId: string, name: string) => {
-    setExercises(prev =>
-      prev.map(ex =>
-        ex.id === exerciseId ? { ...ex, name } : ex
-      )
-    );
+    setExercises(prev => prev.map(ex => ex.id === exerciseId ? { ...ex, name } : ex));
   };
 
-  // *** YENİ addSet FONKSİYONU ***
   const addSet = (exerciseId: string) => {
     setExercises(prev =>
       prev.map(ex => {
         if (ex.id === exerciseId) {
-          // Eklenecek yeni set için bir önceki setin verilerini al
           const lastSet = ex.sets.length > 0 ? ex.sets[ex.sets.length - 1] : { reps: 0, weight: 0 };
-          return {
-            ...ex,
-            // Yeni seti, son setin değerleriyle oluştur
-            sets: [...ex.sets, { reps: lastSet.reps, weight: lastSet.weight }]
-          };
+          return { ...ex, sets: [...ex.sets, { reps: lastSet.reps, weight: lastSet.weight }] };
         }
         return ex;
       })
     );
   };
 
-
   const removeSet = (exerciseId: string, setIndex: number) => {
     setExercises(prev =>
-      prev.map(ex =>
-        ex.id === exerciseId
-          ? { ...ex, sets: ex.sets.filter((_, i) => i !== setIndex) }
-          : ex
-      )
+      prev.map(ex => ex.id === exerciseId ? { ...ex, sets: ex.sets.filter((_, i) => i !== setIndex) } : ex)
     );
   };
 
   const updateSet = (exerciseId: string, setIndex: number, field: 'reps' | 'weight', value: number) => {
     setExercises(prev =>
-      prev.map(ex =>
-        ex.id === exerciseId
-          ? {
-              ...ex,
-              sets: ex.sets.map((set, i) =>
-                i === setIndex ? { ...set, [field]: value } : set
-              )
-            }
-          : ex
-      )
+      prev.map(ex => ex.id === exerciseId ? { ...ex, sets: ex.sets.map((set, i) => i === setIndex ? { ...set, [field]: value } : set) } : ex)
     );
   };
 
   const handleSave = () => {
-    // Sadece adı girilmiş ve içinde geçerli en az bir set bulunan egzersizleri al
     const validExercises = exercises.filter(ex => 
       ex.name.trim() && ex.sets.some(set => set.reps > 0 || set.weight > 0)
-    ).map(ex => ({
-        ...ex,
-        // Sadece geçerli setleri (tekrar veya ağırlığı olan) tut
-        sets: ex.sets.filter(set => set.reps > 0 || set.weight > 0)
-    }));
+    ).map(ex => ({ ...ex, sets: ex.sets.filter(set => set.reps > 0 || set.weight > 0) }));
 
     if (validExercises.length === 0) {
-      alert('Kaydedilecek geçerli bir set bulunamadı. Lütfen en az bir tekrar veya ağırlık girin.');
+      alert('Kaydedilecek geçerli bir set bulunamadı.');
       return;
     }
-
-    onSave({
-      date,
-      exercises: validExercises
-    });
+    onSave({ date, exercises: validExercises });
   };
-
-  const commonExercises = [
-    'Bench Press', 'Squat', 'Deadlift', 'Shoulder Press', 'Barbell Row',
-    'Pull Up', 'Dumbbell Curl', 'Tricep Dip', 'Lat Pulldown', 'Leg Press'
-  ];
 
   return (
     <div className="p-4">
-      <div className="mb-6">
+      <div className="flex justify-between items-center mb-6">
         <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
           {format(new Date(date), 'dd MMMM yyyy', { locale: tr })}
         </h2>
-      </div>
-
-      <div className="mb-6">
-        <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Popüler Hareketler</h3>
-        <div className="flex flex-wrap gap-2">
-          {commonExercises.map(exercise => (
-            <button
-              key={exercise}
-              onClick={() => {
-                const newExercise: Exercise = {
-                  id: Date.now().toString(),
-                  name: exercise,
-                  sets: [{ reps: 0, weight: 0 }]
-                };
-                setExercises(prev => [...prev, newExercise]);
-              }}
-              className="px-3 py-2 bg-blue-50 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded-lg text-sm hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors"
-            >
-              {exercise}
-            </button>
-          ))}
+        
+        {/* --- YENİ RUTİN SEÇME BUTONU --- */}
+        <div className="relative">
+          <button 
+            onClick={() => setRoutinePickerOpen(prev => !prev)}
+            className="flex items-center gap-2 px-3 py-2 bg-green-500 text-white rounded-lg text-sm hover:bg-green-600"
+          >
+            <BookCopy size={16} /> Rutin Seç
+          </button>
+          {isRoutinePickerOpen && (
+            <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-xl z-10 border dark:border-gray-700">
+              {routines.length > 0 ? routines.map(routine => (
+                <a
+                  key={routine.id}
+                  onClick={() => handleSelectRoutine(routine)}
+                  className="block px-4 py-3 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                >
+                  {routine.name}
+                </a>
+              )) : <span className="block px-4 py-3 text-sm text-gray-500">Kayıtlı rutin yok.</span>}
+            </div>
+          )}
         </div>
+        {/* ----------------------------- */}
+
       </div>
 
       <div className="space-y-6">
@@ -194,14 +172,6 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, onSave, 
                     step="0.5"
                     className="p-2 border border-gray-200 dark:border-gray-700 rounded-lg text-center focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200"
                   />
-                  {exercise.sets.length > 1 && (
-                    <button
-                      onClick={() => removeSet(exercise.id, setIndex)}
-                      className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/50 rounded-lg transition-colors"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  )}
                 </div>
               ))}
             </div>
@@ -221,7 +191,7 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, onSave, 
         className="w-full mt-6 p-4 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-xl border-2 border-gray-200 dark:border-gray-600 border-dashed hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center justify-center gap-2"
       >
         <Plus size={20} />
-        Hareket Ekle
+        Manuel Hareket Ekle
       </button>
 
       <div className="flex gap-3 mt-8">
@@ -236,7 +206,7 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, onSave, 
           className="flex-1 py-3 px-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
         >
           <Save size={20} />
-          Kaydet
+          Antrenmanı Kaydet
         </button>
       </div>
     </div>
