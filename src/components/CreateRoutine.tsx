@@ -1,49 +1,51 @@
 import React, { useState, useEffect } from 'react';
-import { Exercise as ApiExercise, getExercises } from '../services/exerciseApi';
+import { Exercise as ApiExercise, searchExercisesByName } from '../services/exerciseApi';
 import { Save, Plus, Trash2, Search } from 'lucide-react';
 import { Routine } from './RoutinesList';
 
 interface CreateRoutineProps {
   existingRoutine: Routine | null;
-  onSaveRoutine: (id: string | null, name: string, exercises: ApiExercise[]) => void;
+  onSaveRoutine: (id: string | null, name: string, exercises: { id: string; name: string }[]) => void;
   onCancel: () => void;
 }
 
 const CreateRoutine: React.FC<CreateRoutineProps> = ({ existingRoutine, onSaveRoutine, onCancel }) => {
   const [routineName, setRoutineName] = useState('');
-  const [selectedExercises, setSelectedExercises] = useState<ApiExercise[]>([]);
-  const [allExercises, setAllExercises] = useState<ApiExercise[]>([]);
+  const [selectedExercises, setSelectedExercises] = useState<{ id: string; name: string }[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [searchedExercises, setSearchedExercises] = useState<ApiExercise[]>([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Eğer düzenleme modundaysak, mevcut rutinin verilerini forma yükle
     if (existingRoutine) {
       setRoutineName(existingRoutine.name);
-      // Gelen 'exercises' listesinin tam ApiExercise objesi olduğundan emin olmalıyız.
-      // Supabase'den sadece id ve name geliyorsa, allExercises içinden eşleştirme yapmak gerekir.
-      // Şimdilik gelen verinin uyumlu olduğunu varsayıyoruz.
-      setSelectedExercises(existingRoutine.exercises as ApiExercise[]);
+      setSelectedExercises(existingRoutine.exercises);
     }
-    
-    // Kütüphanedeki tüm hareketleri yükle
-    const loadData = async () => {
-      setLoading(true);
-      const exercises = await getExercises();
-      setAllExercises(exercises);
-      setLoading(false);
-    };
-    loadData();
   }, [existingRoutine]);
 
+  useEffect(() => {
+    const searchTimer = setTimeout(async () => {
+      if (searchTerm.trim().length < 2) {
+        setSearchedExercises([]);
+        return;
+      }
+      setLoading(true);
+      const results = await searchExercisesByName(searchTerm);
+      setSearchedExercises(results);
+      setLoading(false);
+    }, 500);
+
+    return () => clearTimeout(searchTimer);
+  }, [searchTerm]);
+
   const handleAddExercise = (exercise: ApiExercise) => {
-    if (!selectedExercises.find(e => e.name === exercise.name)) {
-      setSelectedExercises(prev => [...prev, exercise]);
+    if (!selectedExercises.find(e => e.name.toLowerCase() === exercise.name.toLowerCase())) {
+      setSelectedExercises(prev => [...prev, { id: exercise.id, name: exercise.name }]);
     }
   };
 
-  const handleRemoveExercise = (exerciseId: string) => {
-    setSelectedExercises(prev => prev.filter(e => e.id !== exerciseId));
+  const handleRemoveExercise = (exerciseName: string) => {
+    setSelectedExercises(prev => prev.filter(e => e.name !== exerciseName));
   };
 
   const handleSave = () => {
@@ -55,13 +57,12 @@ const CreateRoutine: React.FC<CreateRoutineProps> = ({ existingRoutine, onSaveRo
       alert('Lütfen rutine en az bir hareket ekleyin.');
       return;
     }
-    // Düzenleme modundaysak mevcut ID'yi, değilse null gönder
     onSaveRoutine(existingRoutine ? existingRoutine.id : null, routineName, selectedExercises);
   };
 
-  const filteredLibrary = searchTerm
-    ? allExercises.filter(e => e.name.toLowerCase().includes(searchTerm.toLowerCase()) && !selectedExercises.some(se => se.name === e.name))
-    : allExercises.filter(e => !selectedExercises.some(se => se.name === e.name));
+  const filteredLibrary = searchedExercises.filter(
+    ex => !selectedExercises.some(se => se.name.toLowerCase() === ex.name.toLowerCase())
+  );
 
   return (
     <div className="p-4 space-y-6">
@@ -77,24 +78,37 @@ const CreateRoutine: React.FC<CreateRoutineProps> = ({ existingRoutine, onSaveRo
         {selectedExercises.map(ex => (
           <div key={ex.id} className="flex items-center justify-between bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm">
             <span className="text-gray-800 dark:text-gray-200">{ex.name}</span>
-            <button onClick={() => handleRemoveExercise(ex.id)} className="text-red-500 hover:text-red-700"><Trash2 size={18} /></button>
+            <button onClick={() => handleRemoveExercise(ex.name)} className="text-red-500 hover:text-red-700"><Trash2 size={18} /></button>
           </div>
         ))}
+         {selectedExercises.length === 0 && (
+            <p className="text-sm text-center text-gray-500 py-4">Rutine hareket eklemek için aşağıdan arama yapın.</p>
+        )}
       </div>
 
       <div className="space-y-3">
         <h3 className="font-semibold text-gray-800 dark:text-gray-200">Hareket Ekle</h3>
         <div className="relative">
           <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-          <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Hareket ara..." className="w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800" />
+          {/* DÜZELTME BURADA: `dark:text-gray-200` sınıfı eklendi */}
+          <input 
+            type="text" 
+            value={searchTerm} 
+            onChange={(e) => setSearchTerm(e.target.value)} 
+            placeholder="Hareket ara..." 
+            className="w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200" 
+          />
         </div>
         <div className="max-h-60 overflow-y-auto space-y-2 p-2 bg-gray-50 dark:bg-gray-900 rounded-lg border dark:border-gray-700">
-          {loading ? <p className="text-center text-gray-500">Yükleniyor...</p> : filteredLibrary.map(ex => (
+          {loading ? <p className="text-center text-gray-500">Aranıyor...</p> : filteredLibrary.map(ex => (
             <div key={ex.id} className="flex items-center justify-between bg-white dark:bg-gray-800 p-3 rounded-lg">
               <span className="text-gray-800 dark:text-gray-200">{ex.name}</span>
               <button onClick={() => handleAddExercise(ex)} className="text-blue-600 hover:text-blue-800"><Plus size={18} /></button>
             </div>
           ))}
+           {!loading && filteredLibrary.length === 0 && searchTerm.length > 1 && (
+                <p className="text-center text-gray-500 p-3">Aramayla eşleşen hareket bulunamadı.</p>
+            )}
         </div>
       </div>
       
