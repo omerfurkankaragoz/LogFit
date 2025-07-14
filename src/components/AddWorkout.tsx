@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Save, BookCopy, Search } from 'lucide-react';
 import { format } from 'date-fns';
@@ -11,15 +10,14 @@ interface AddWorkoutProps {
   date: string;
   existingWorkout: Workout | null;
   routines: Routine[];
+  workouts: Workout[]; // Tüm antrenman geçmişi
   onSave: (workout: Omit<Workout, 'id'>) => void;
   onCancel: () => void;
 }
 
-const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines, onSave, onCancel }) => {
+const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines, workouts, onSave, onCancel }) => {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [isRoutinePickerOpen, setRoutinePickerOpen] = useState(false);
-
-  // Arama için yeni state'ler
   const [searchTerm, setSearchTerm] = useState('');
   const [searchedExercises, setSearchedExercises] = useState<ApiExercise[]>([]);
   const [loading, setLoading] = useState(false);
@@ -30,12 +28,10 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
     } else {
       setExercises([]);
     }
-    // Yeni bir antrenman eklemeye başlandığında arama sonuçlarını temizle
     setSearchTerm('');
     setSearchedExercises([]);
   }, [existingWorkout, date]);
 
-  // Arama useEffect'i
   useEffect(() => {
     const searchTimer = setTimeout(async () => {
       if (searchTerm.trim().length < 2) {
@@ -44,16 +40,32 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
       }
       setLoading(true);
       const results = await searchExercisesByName(searchTerm);
-      // Antrenmana zaten eklenmiş hareketleri filtrele
       const filteredResults = results.filter(apiEx =>
         !exercises.some(ex => ex.name.toLowerCase() === apiEx.name.toLowerCase())
       );
       setSearchedExercises(filteredResults);
       setLoading(false);
-    }, 500); // 500ms bekleme süresi
+    }, 500);
 
     return () => clearTimeout(searchTimer);
-  }, [searchTerm, exercises]); // 'exercises' state'i değiştiğinde de filtrelemeyi yeniden yap
+  }, [searchTerm, exercises]);
+
+  const getPreviousExerciseData = (exerciseName: string): Exercise | null => {
+    if (!exerciseName) return null;
+    // Mevcut tarihten önceki antrenmanları bul ve tarihe göre sırala
+    const sortedWorkouts = [...workouts]
+      .filter(w => w.date < date)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    // En son antrenmanda bu egzersizi ara
+    for (const prevWorkout of sortedWorkouts) {
+      const exercise = prevWorkout.exercises.find(ex => ex.name.toLowerCase() === exerciseName.toLowerCase());
+      if (exercise) {
+        return exercise; // Egzersizi bulursak döndür
+      }
+    }
+    return null; // Bulamazsak null döndür
+  };
 
   const handleSelectRoutine = (routine: Routine) => {
     const exercisesFromRoutine = routine.exercises.map(ex => ({
@@ -65,7 +77,6 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
     setRoutinePickerOpen(false);
   };
 
-  // Aranan hareketi ekleme fonksiyonu
   const handleAddSearchedExercise = (exercise: ApiExercise) => {
     const newExercise: Exercise = {
       id: Date.now().toString(),
@@ -73,7 +84,6 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
       sets: [{ reps: 0, weight: 0 }]
     };
     setExercises(prev => [...prev, newExercise]);
-    // Hareketi ekledikten sonra arama terimini ve sonuçlarını temizle
     setSearchTerm('');
     setSearchedExercises([]);
   };
@@ -202,46 +212,56 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
                 Antrenman Listesi
             </h3>
         )}
-        {exercises.map((exercise) => (
-          <div key={exercise.id} className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
-            <div className="flex items-center gap-2 mb-4">
-              <input
-                type="text"
-                value={exercise.name}
-                onChange={(e) => updateExerciseName(exercise.id, e.target.value)}
-                placeholder="Hareket adı"
-                className="flex-1 p-3 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200"
-              />
-              <button
-                onClick={() => removeExercise(exercise.id)}
-                className="p-3 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/50 rounded-lg transition-colors"
-              >
-                <Trash2 size={20} />
+        {exercises.map((exercise) => {
+          const previousExercise = getPreviousExerciseData(exercise.name);
+          const previousMaxWeight = previousExercise && previousExercise.sets.length > 0
+            ? Math.max(...previousExercise.sets.map(s => s.weight))
+            : null;
+
+          return (
+            <div key={exercise.id} className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
+              <div className="flex items-center gap-2 mb-4">
+                <input
+                  type="text"
+                  value={exercise.name}
+                  onChange={(e) => updateExerciseName(exercise.id, e.target.value)}
+                  placeholder="Hareket adı"
+                  className="flex-1 p-3 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                />
+                <button onClick={() => removeExercise(exercise.id)} className="p-3 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/50 rounded-lg transition-colors">
+                  <Trash2 size={20} />
+                </button>
+              </div>
+              <div className="space-y-2">
+                <div className="grid grid-cols-5 gap-2 text-sm font-medium text-gray-600 dark:text-gray-400 px-1">
+                  <span>Set</span>
+                  <span>Önceki</span>
+                  <span>Kg</span>
+                  <span>Tekrar</span>
+                  <span></span>
+                </div>
+                {exercise.sets.map((set, setIndex) => {
+                  return (
+                    <div key={setIndex} className="grid grid-cols-5 gap-2 items-center">
+                      <span className="text-center font-medium text-gray-500 dark:text-gray-400">{setIndex + 1}</span>
+                      <div className="text-center text-xs font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/50 p-2 rounded-md h-full flex items-center justify-center">
+                        {previousMaxWeight !== null ? `${previousMaxWeight}kg` : '-'}
+                      </div>
+                      <input type="number" inputMode="numeric" value={set.weight || ''} onChange={(e) => updateSet(exercise.id, setIndex, 'weight', parseFloat(e.target.value) || 0)} placeholder="0" step="0.5" className="p-2 border border-gray-200 dark:border-gray-700 rounded-lg text-center focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200" />
+                      <input type="number" inputMode="numeric" value={set.reps || ''} onChange={(e) => updateSet(exercise.id, setIndex, 'reps', parseInt(e.target.value) || 0)} placeholder="0" className="p-2 border border-gray-200 dark:border-gray-700 rounded-lg text-center focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200" />
+                      <button onClick={() => removeSet(exercise.id, setIndex)} className="text-gray-400 hover:text-red-500 m-auto">
+                        <Trash2 size={16}/>
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+              <button onClick={() => addSet(exercise.id)} className="w-full mt-3 p-2 text-blue-600 border-2 border-blue-200 dark:border-blue-800 border-dashed rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/50 transition-colors">
+                + Set Ekle
               </button>
             </div>
-            <div className="space-y-2">
-              <div className="grid grid-cols-4 gap-2 text-sm font-medium text-gray-600 dark:text-gray-400 px-2">
-                <span>Set</span>
-                <span>Tekrar</span>
-                <span>Kg</span>
-                <span></span>
-              </div>
-              {exercise.sets.map((set, setIndex) => (
-                <div key={setIndex} className="grid grid-cols-4 gap-2 items-center">
-                  <span className="text-center font-medium text-gray-500 dark:text-gray-400">{setIndex + 1}</span>
-                  <input type="number" inputMode="numeric" value={set.reps || ''} onChange={(e) => updateSet(exercise.id, setIndex, 'reps', parseInt(e.target.value) || 0)} placeholder="0" className="p-2 border border-gray-200 dark:border-gray-700 rounded-lg text-center focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200" />
-                  <input type="number" inputMode="numeric" value={set.weight || ''} onChange={(e) => updateSet(exercise.id, setIndex, 'weight', parseFloat(e.target.value) || 0)} placeholder="0" step="0.5" className="p-2 border border-gray-200 dark:border-gray-700 rounded-lg text-center focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200" />
-                   <button onClick={() => removeSet(exercise.id, setIndex)} className="text-gray-400 hover:text-red-500 m-auto">
-                    <Trash2 size={16}/>
-                  </button>
-                </div>
-              ))}
-            </div>
-            <button onClick={() => addSet(exercise.id)} className="w-full mt-3 p-2 text-blue-600 border-2 border-blue-200 dark:border-blue-800 border-dashed rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/50 transition-colors">
-              + Set Ekle
-            </button>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {exercises.length > 0 && (

@@ -177,6 +177,7 @@ function App() {
           date={selectedDate} 
           existingWorkout={editingWorkout} 
           routines={routines}
+          workouts={workouts}
           onSave={handleSaveWorkout} 
           onCancel={() => { setEditingWorkout(null); setCurrentView('calendar'); }} 
         />;
