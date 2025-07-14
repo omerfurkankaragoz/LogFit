@@ -1,8 +1,6 @@
-// src/components/ExerciseLibrary.tsx
-
 import React, { useState, useEffect } from 'react';
 import { Search, Filter, Plus } from 'lucide-react';
-import { Exercise, searchExercisesByName, getExercisesByBodyPart, getBodyParts } from '../services/exerciseApi';
+import { Exercise, getAllExercises, getBodyParts } from '../services/exerciseApi';
 
 interface ExerciseLibraryProps {
   onExerciseSelect: (exercise: Exercise) => void;
@@ -10,50 +8,51 @@ interface ExerciseLibraryProps {
 }
 
 const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({ onExerciseSelect, onBack }) => {
+  const [allExercises, setAllExercises] = useState<Exercise[]>([]); // Tüm egzersizler için ana liste
   const [filteredExercises, setFilteredExercises] = useState<Exercise[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBodyPart, setSelectedBodyPart] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
+  const [bodyParts, setBodyParts] = useState<string[]>([]);
 
-  const bodyParts = getBodyParts();
-
+  // Sayfa yüklendiğinde tüm başlangıç verilerini çekmek için useEffect
   useEffect(() => {
-    const searchTimer = setTimeout(async () => {
-      const query = searchQuery.trim();
-      const bodyPart = selectedBodyPart;
-
-      if (!query && bodyPart === 'all') {
-        setFilteredExercises([]);
-        return;
-      }
-
+    const fetchInitialData = async () => {
       setLoading(true);
-      let results: Exercise[] = [];
+      const [parts, exercises] = await Promise.all([
+        getBodyParts(),
+        getAllExercises()
+      ]);
+      setBodyParts(parts);
+      setAllExercises(exercises);
+      setFilteredExercises(exercises); // Başlangıçta tümünü göster
+      setLoading(false);
+    };
 
-      try {
-        if (query) {
-          // Arama kutusunda yazı varsa, isme göre ara
-          results = await searchExercisesByName(query);
-          // Eğer ek olarak vücut filtresi de varsa, gelen sonuçları daralt
-          if (bodyPart !== 'all') {
-            results = results.filter(ex => ex.bodyPart.toLowerCase() === bodyPart.toLowerCase());
-          }
-        } else {
-          // Arama kutusu boşsa ve sadece vücut filtresi varsa, vücut bölgesine göre getir
-          results = await getExercisesByBodyPart(bodyPart);
-        }
-        setFilteredExercises(results);
-      } catch (error) {
-        // Hata durumunda konsola yazmak yerine sessizce boş dizi basabiliriz
-        setFilteredExercises([]);
-      } finally {
-        setLoading(false);
-      }
-    }, 500);
+    fetchInitialData();
+  }, []);
 
-    return () => clearTimeout(searchTimer);
-  }, [searchQuery, selectedBodyPart]);
+  // Arama ve filtreleme mantığı için useEffect
+  useEffect(() => {
+    let exercises = [...allExercises];
+
+    // Arama sorgusuna göre filtrele
+    if (searchQuery.trim()) {
+      exercises = exercises.filter(ex =>
+        ex.name.toLowerCase().includes(searchQuery.trim().toLowerCase())
+      );
+    }
+
+    // Vücut bölgesine göre filtrele
+    if (selectedBodyPart !== 'all') {
+      exercises = exercises.filter(ex =>
+        ex.bodyPart && ex.bodyPart.toLowerCase() === selectedBodyPart.toLowerCase()
+      );
+    }
+
+    setFilteredExercises(exercises);
+  }, [searchQuery, selectedBodyPart, allExercises]);
 
   const handleExerciseSelect = (exercise: Exercise) => {
     if (confirm(`"${exercise.name}" hareketini bugünkü antrenmana eklemek istiyor musunuz?`)) {
@@ -62,12 +61,14 @@ const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({ onExerciseSelect, onB
   };
 
   const getBodyPartEmoji = (bodyPart: string) => {
-    const emojis: { [key: string]: string } = { 'chest': '💪', 'back': '🏋️', 'shoulders': '🤸', 'waist': '🔥', 'cardio': '🏃', 'lower arms': '💪', 'upper arms': '💪', 'lower legs': '🦵', 'upper legs': '🦵', 'neck': '🤸' };
+    if (!bodyPart) return '🏃';
+    const emojis: { [key: string]: string } = { 'chest': '💪', 'back': '🏋️', 'shoulders': '🤸', 'waist': '🔥', 'cardio': '🏃', 'lower arms': '💪', 'upper arms': '💪', 'lower legs': '🦵', 'upper legs': '🦵', 'neck': '🤸', 'abdominals': '🔥' };
     return emojis[bodyPart.toLowerCase()] || '🏃';
   };
-
+  
   const getBodyPartName = (bodyPart: string) => {
-    const names: { [key: string]: string } = { 'chest': 'Göğüs', 'back': 'Sırt', 'shoulders': 'Omuz', 'waist': 'Karın', 'cardio': 'Kardiyo', 'neck': 'Boyun', 'lower arms': 'Ön Kol', 'upper arms': 'Pazu/Arka Kol', 'lower legs': 'Alt Bacak', 'upper legs': 'Üst Bacak' };
+    if (!bodyPart) return '';
+    const names: { [key: string]: string } = { 'chest': 'Göğüs', 'back': 'Sırt', 'shoulders': 'Omuz', 'waist': 'Karın', 'cardio': 'Kardiyo', 'neck': 'Boyun', 'lower arms': 'Ön Kol', 'upper arms': 'Pazu/Arka Kol', 'lower legs': 'Alt Bacak', 'upper legs': 'Üst Bacak', 'abdominals': 'Karın' };
     return names[bodyPart.toLowerCase()] || bodyPart.charAt(0).toUpperCase() + bodyPart.slice(1);
   };
 
@@ -91,7 +92,7 @@ const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({ onExerciseSelect, onB
           </div>
         )}
       </div>
-      {loading && (<div className="flex items-center justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div><span className="ml-3 text-gray-600 dark:text-gray-400">Aranıyor...</span></div>)}
+      {loading && (<div className="flex items-center justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div><span className="ml-3 text-gray-600 dark:text-gray-400">Yükleniyor...</span></div>)}
       {!loading && (
         <>
           <div className="mb-4"><p className="text-sm text-gray-600 dark:text-gray-400">{filteredExercises.length} hareket bulundu</p></div>
@@ -109,7 +110,6 @@ const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({ onExerciseSelect, onB
               </div>
             ))}
           </div>
-          {filteredExercises.length === 0 && (searchQuery.trim() || selectedBodyPart !== 'all') && (<div className="text-center py-8"><div className="text-gray-400 dark:text-gray-500 mb-2">🔍</div><h3 className="text-lg font-medium text-gray-600 dark:text-gray-400 mb-2">Hareket bulunamadı</h3><p className="text-gray-500 dark:text-gray-500">Arama kriterlerinizi değiştirmeyi deneyin.</p></div>)}
         </>
       )}
     </div>

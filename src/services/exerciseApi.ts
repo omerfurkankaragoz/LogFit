@@ -1,8 +1,7 @@
-// src/services/exerciseApi.ts
+import { supabase } from './supabaseClient';
 
-const API_KEY = import.meta.env.VITE_RAPIDAPI_KEY;
-const BASE_URL = 'https://exercisedb.p.rapidapi.com';
-
+// Uygulamanın kullandığı arayüz.
+// Supabase'den gelen veriyi bu formata dönüştüreceğiz.
 export interface Exercise {
   id: string;
   name: string;
@@ -13,77 +12,120 @@ export interface Exercise {
   instructions: string[];
 }
 
-// API'den gelen veriyi güvenli bir şekilde işleyen yardımcı fonksiyon
-const processApiResponse = (data: any[]): Exercise[] => {
-  if (!Array.isArray(data)) {
-    // API'den beklenen format gelmezse boş dizi döndür.
-    return [];
-  }
-  return data.map(ex => ({
-    ...ex,
-    // Eğer ex.gifUrl varsa .replace() yap, yoksa boş string ata.
-    gifUrl: ex.gifUrl ? ex.gifUrl.replace('http://', 'https://') : ''
-  }));
+// Supabase'den gelen veriyi (snake_case) uygulamamızın kullandığı formata (camelCase) dönüştüren yardımcı fonksiyon.
+const mapSupabaseToExercise = (data: any): Exercise => {
+  return {
+    id: data.id,
+    name: data.name,
+    bodyPart: data.body_part,
+    equipment: data.equipment,
+    gifUrl: data.gif_url,
+    target: data.target_muscle,
+    instructions: data.instructions || [], // instructions null ise boş dizi ata
+  };
 };
 
 /**
- * API üzerinden, verilen isme göre arama yapar.
+ * Supabase veritabanından TÜM egzersizleri çeker.
  */
-export const searchExercisesByName = async (name: string): Promise<Exercise[]> => {
-  if (!name.trim() || !API_KEY) {
-      return [];
-  }
-
+export const getAllExercises = async (): Promise<Exercise[]> => {
   try {
-    const response = await fetch(`${BASE_URL}/exercises/name/${name}?limit=200`, {
-      headers: {
-        'X-RapidAPI-Key': API_KEY,
-        'X-RapidAPI-Host': 'exercisedb.p.rapidapi.com'
-      }
-    });
+    const { data, error } = await supabase
+      .from('exercises_library')
+      .select('*')
+      .order('name', { ascending: true }); // İsimlerine göre sıralı getirelim
 
-    if (!response.ok) {
+    if (error) {
+      console.error('Supabase getAllExercises hatası:', error);
       return [];
     }
-
-    const data = await response.json();
-    return processApiResponse(data);
+    
+    return data.map(mapSupabaseToExercise);
 
   } catch (error) {
+    console.error('API servis hatası:', error);
+    return [];
+  }
+};
+
+
+/**
+ * Supabase veritabanından, verilen isme göre arama yapar.
+ * .ilike() kullanarak büyük/küçük harf duyarsız ve 'içerir' şeklinde arama yapılır.
+ */
+export const searchExercisesByName = async (name: string): Promise<Exercise[]> => {
+  if (!name.trim()) {
+      return [];
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('exercises_library') // Tablo adını güncelledik
+      .select('*')
+      .ilike('name', `%${name}%`)
+      .limit(50); // Sonuçları limitliyoruz
+
+    if (error) {
+      console.error('Supabase arama hatası:', error);
+      return [];
+    }
+    
+    return data.map(mapSupabaseToExercise);
+
+  } catch (error) {
+    console.error('API servis hatası:', error);
     return [];
   }
 };
 
 /**
- * API üzerinden, verilen vücut bölgesine göre egzersizleri listeler.
+ * Supabase veritabanından, verilen vücut bölgesine göre egzersizleri listeler.
  */
 export const getExercisesByBodyPart = async (bodyPart: string): Promise<Exercise[]> => {
-  if (bodyPart === 'all' || !bodyPart || !API_KEY) {
+  if (bodyPart === 'all' || !bodyPart) {
       return [];
   }
 
   try {
-    const response = await fetch(`${BASE_URL}/exercises/bodyPart/${bodyPart.toLowerCase()}?limit=200`, {
-      headers: {
-        'X-RapidAPI-Key': API_KEY,
-        'X-RapidAPI-Host': 'exercisedb.p.rapidapi.com'
-      }
-    });
-    if (!response.ok) {
+    const { data, error } = await supabase
+        .from('exercises_library') // Tablo adını güncelledik
+        .select('*')
+        .eq('body_part', bodyPart)
+        .limit(200);
+
+    if (error) {
+        console.error('Supabase vücut bölgesi arama hatası:', error);
         return [];
     }
     
-    const data = await response.json();
-    return processApiResponse(data);
+    return data.map(mapSupabaseToExercise);
 
   } catch (error) {
+    console.error('API servis hatası:', error);
     return [];
   }
 };
 
 /**
- * Mevcut tüm vücut bölgesi kategorilerini döndürür.
+ * Supabase'deki tüm benzersiz vücut bölgesi kategorilerini döndürür.
  */
-export const getBodyParts = (): string[] => {
-    return ['back', 'cardio', 'chest', 'lower arms', 'lower legs', 'neck', 'shoulders', 'upper arms', 'upper legs', 'waist'];
+export const getBodyParts = async (): Promise<string[]> => {
+    try {
+        const { data, error } = await supabase
+            .from('exercises_library')
+            .select('body_part');
+
+        if (error) {
+            console.error('Supabase getBodyParts hatası:', error);
+            return [];
+        }
+        
+        // Gelen verideki tekrar edenleri kaldırıp sıralıyoruz.
+        const uniqueParts = [...new Set(data.filter(item => item.body_part).map((item: { body_part: string }) => item.body_part))];
+        return uniqueParts.sort();
+
+    } catch (error) {
+        console.error('API servis hatası:', error);
+        return [];
+    }
 };
