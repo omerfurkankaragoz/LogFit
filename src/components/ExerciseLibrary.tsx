@@ -2,13 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { Search, Filter, Plus } from 'lucide-react';
 import { Exercise, getAllExercises, getBodyParts } from '../services/exerciseApi';
 
+// SUPABASE PROJE URL'NİZİ BURAYA GİRİN
+// Supabase projenizin Ayarlar > API kısmında bulabilirsiniz.
+const SUPABASE_PROJECT_URL = 'https://ekrhekungvoisfughwuz.supabase.co'; 
+// DÜZELTME: Bucket adı 'images' olarak güncellendi.
+const BUCKET_NAME = 'images';
+
 interface ExerciseLibraryProps {
   onExerciseSelect: (exercise: Exercise) => void;
   onBack: () => void;
 }
 
 const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({ onExerciseSelect, onBack }) => {
-  const [allExercises, setAllExercises] = useState<Exercise[]>([]); // Tüm egzersizler için ana liste
+  const [allExercises, setAllExercises] = useState<Exercise[]>([]);
   const [filteredExercises, setFilteredExercises] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -16,7 +22,6 @@ const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({ onExerciseSelect, onB
   const [showFilters, setShowFilters] = useState(false);
   const [bodyParts, setBodyParts] = useState<string[]>([]);
 
-  // Sayfa yüklendiğinde tüm başlangıç verilerini çekmek için useEffect
   useEffect(() => {
     const fetchInitialData = async () => {
       setLoading(true);
@@ -26,31 +31,25 @@ const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({ onExerciseSelect, onB
       ]);
       setBodyParts(parts);
       setAllExercises(exercises);
-      setFilteredExercises(exercises); // Başlangıçta tümünü göster
+      setFilteredExercises(exercises);
       setLoading(false);
     };
 
     fetchInitialData();
   }, []);
 
-  // Arama ve filtreleme mantığı için useEffect
   useEffect(() => {
     let exercises = [...allExercises];
-
-    // Arama sorgusuna göre filtrele
     if (searchQuery.trim()) {
       exercises = exercises.filter(ex =>
         ex.name.toLowerCase().includes(searchQuery.trim().toLowerCase())
       );
     }
-
-    // Vücut bölgesine göre filtrele
     if (selectedBodyPart !== 'all') {
       exercises = exercises.filter(ex =>
         ex.bodyPart && ex.bodyPart.toLowerCase() === selectedBodyPart.toLowerCase()
       );
     }
-
     setFilteredExercises(exercises);
   }, [searchQuery, selectedBodyPart, allExercises]);
 
@@ -58,6 +57,13 @@ const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({ onExerciseSelect, onB
     if (confirm(`"${exercise.name}" hareketini bugünkü antrenmana eklemek istiyor musunuz?`)) {
       onExerciseSelect(exercise);
     }
+  };
+  
+  // DÜZELTME: Görselin tam URL'sini oluşturan fonksiyona '/exercises/' yolu eklendi.
+  const getImageUrl = (gifPath: string) => {
+    if (!gifPath) return 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop';
+    // Örnek URL: .../storage/v1/object/public/images/exercises/3_4_Sit-Up/0.jpg
+    return `${SUPABASE_PROJECT_URL}/storage/v1/object/public/${BUCKET_NAME}/exercises/${gifPath}`;
   };
 
   const getBodyPartEmoji = (bodyPart: string) => {
@@ -100,7 +106,14 @@ const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({ onExerciseSelect, onB
             {filteredExercises.map(exercise => (
               <div key={exercise.id} className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-shadow">
                 <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700 flex-shrink-0"><img src={exercise.gifUrl} alt={exercise.name} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.src = 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop'; }}/></div>
+                  <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700 flex-shrink-0">
+                    <img 
+                      src={getImageUrl(exercise.gifUrl)} 
+                      alt={exercise.name} 
+                      className="w-full h-full object-cover" 
+                      onError={(e) => { e.currentTarget.src = 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop'; }}
+                    />
+                  </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-gray-800 dark:text-gray-200 truncate">{exercise.name}</h3>
                     <div className="flex items-center gap-2 mt-1"><span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 px-2 py-1 rounded-full">{getBodyPartName(exercise.bodyPart)}</span><span className="text-xs bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 px-2 py-1 rounded-full">{exercise.equipment}</span></div>
