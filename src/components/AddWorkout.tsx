@@ -6,7 +6,7 @@ import { Exercise, Workout } from '../App';
 import { Routine } from './RoutinesList';
 import { getAllExercises, getBodyParts, Exercise as LibraryExercise } from '../services/exerciseApi';
 
-// SUPABASE PROJE URL'NİZİ BURAYA GİRİN
+// SUPABASE PROJE URL'NİZİ VE BUCKET ADINI GİRİN
 const SUPABASE_PROJECT_URL = 'https://ekrhekungvoisfughwuz.supabase.co'; 
 const BUCKET_NAME = 'images';
 
@@ -246,7 +246,7 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
                     <BookCopy size={16} /> Rutinden Ekle
                 </button>
                 {isRoutinePickerOpen && (
-                    <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-xl z-10 border dark:border-gray-700">
+                    <div className="absolute left-0 mt-2 w-full bg-white dark:bg-gray-800 rounded-lg shadow-xl z-20 border dark:border-gray-700">
                     {routines.length > 0 ? routines.map(routine => (
                         <a key={routine.id} onClick={() => handleSelectRoutine(routine)} className="block px-4 py-3 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">
                         {routine.name}
