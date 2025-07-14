@@ -15,6 +15,7 @@ const CreateRoutine: React.FC<CreateRoutineProps> = ({ existingRoutine, onSaveRo
   const [searchTerm, setSearchTerm] = useState('');
   const [searchedExercises, setSearchedExercises] = useState<ApiExercise[]>([]);
   const [loading, setLoading] = useState(false);
+  const [manualExerciseName, setManualExerciseName] = useState('');
 
   useEffect(() => {
     if (existingRoutine) {
@@ -42,10 +43,24 @@ const CreateRoutine: React.FC<CreateRoutineProps> = ({ existingRoutine, onSaveRo
     if (!selectedExercises.find(e => e.name.toLowerCase() === exercise.name.toLowerCase())) {
       setSelectedExercises(prev => [...prev, { id: exercise.id, name: exercise.name }]);
     }
+    setSearchTerm('');
+    setSearchedExercises([]);
   };
 
-  const handleRemoveExercise = (exerciseName: string) => {
-    setSelectedExercises(prev => prev.filter(e => e.name !== exerciseName));
+  const handleManualAddExercise = () => {
+    const trimmedName = manualExerciseName.trim();
+    if (trimmedName && !selectedExercises.find(e => e.name.toLowerCase() === trimmedName.toLowerCase())) {
+      const newExercise = {
+        id: `manual-${Date.now()}`, // Benzersiz bir ID oluştur
+        name: trimmedName,
+      };
+      setSelectedExercises(prev => [...prev, newExercise]);
+      setManualExerciseName(''); // Input'u temizle
+    }
+  };
+
+  const handleRemoveExercise = (exerciseId: string) => {
+    setSelectedExercises(prev => prev.filter(e => e.id !== exerciseId));
   };
 
   const handleSave = () => {
@@ -78,36 +93,53 @@ const CreateRoutine: React.FC<CreateRoutineProps> = ({ existingRoutine, onSaveRo
         {selectedExercises.map(ex => (
           <div key={ex.id} className="flex items-center justify-between bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm">
             <span className="text-gray-800 dark:text-gray-200">{ex.name}</span>
-            <button onClick={() => handleRemoveExercise(ex.name)} className="text-red-500 hover:text-red-700"><Trash2 size={18} /></button>
+            <button onClick={() => handleRemoveExercise(ex.id)} className="text-red-500 hover:text-red-700"><Trash2 size={18} /></button>
           </div>
         ))}
          {selectedExercises.length === 0 && (
-            <p className="text-sm text-center text-gray-500 py-4">Rutine hareket eklemek için aşağıdan arama yapın.</p>
+            <p className="text-sm text-center text-gray-500 py-4">Rutine hareket eklemek için aşağıdan arama yapın veya manuel ekleyin.</p>
         )}
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-4">
         <h3 className="font-semibold text-gray-800 dark:text-gray-200">Hareket Ekle</h3>
-        <div className="relative">
-          <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-          <input 
-            type="text" 
-            value={searchTerm} 
-            onChange={(e) => setSearchTerm(e.target.value)} 
-            placeholder="Hareket ara..." 
-            className="w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200" 
-          />
-        </div>
-        <div className="max-h-60 overflow-y-auto space-y-2 p-2 bg-gray-50 dark:bg-gray-900 rounded-lg border dark:border-gray-700">
-          {loading ? <p className="text-center text-gray-500">Aranıyor...</p> : filteredLibrary.map(ex => (
-            <div key={ex.id} className="flex items-center justify-between bg-white dark:bg-gray-800 p-3 rounded-lg">
-              <span className="text-gray-800 dark:text-gray-200">{ex.name}</span>
-              <button onClick={() => handleAddExercise(ex)} className="text-blue-600 hover:text-blue-800"><Plus size={18} /></button>
+        
+        {/* API'den Arama */}
+        <div>
+            <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Kütüphaneden Ara</label>
+            <div className="relative mt-1">
+                <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Hareket ara..." className="w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200" />
             </div>
-          ))}
-           {!loading && filteredLibrary.length === 0 && searchTerm.length > 1 && (
-                <p className="text-center text-gray-500 p-3">Aramayla eşleşen hareket bulunamadı.</p>
-            )}
+            <div className="max-h-48 overflow-y-auto space-y-2 mt-2 p-1">
+                {loading ? <p className="text-center text-gray-500">Aranıyor...</p> : filteredLibrary.map(ex => (
+                    <div key={ex.id} className="flex items-center justify-between bg-gray-50 dark:bg-gray-900 p-3 rounded-lg">
+                    <span className="text-gray-800 dark:text-gray-200">{ex.name}</span>
+                    <button onClick={() => handleAddExercise(ex)} className="text-blue-600 hover:text-blue-800"><Plus size={18} /></button>
+                    </div>
+                ))}
+                {!loading && filteredLibrary.length === 0 && searchTerm.length > 1 && (
+                    <p className="text-center text-gray-500 p-3">Aramayla eşleşen hareket bulunamadı.</p>
+                )}
+            </div>
+        </div>
+
+        {/* Ayırıcı */}
+        <div className="flex items-center text-center">
+            <div className="flex-grow border-t border-gray-200 dark:border-gray-700"></div>
+            <span className="flex-shrink mx-4 text-xs text-gray-400 dark:text-gray-500 uppercase">Veya</span>
+            <div className="flex-grow border-t border-gray-200 dark:border-gray-700"></div>
+        </div>
+
+        {/* Manuel Ekleme */}
+        <div>
+            <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Manuel Olarak Ekle</label>
+            <div className="flex gap-2 mt-1">
+                <input type="text" value={manualExerciseName} onChange={(e) => setManualExerciseName(e.target.value)} placeholder="Örn: Cable Crossover" className="flex-grow p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200" />
+                <button onClick={handleManualAddExercise} className="p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    <Plus size={24} />
+                </button>
+            </div>
         </div>
       </div>
       

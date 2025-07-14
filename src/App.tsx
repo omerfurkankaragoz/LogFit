@@ -41,10 +41,10 @@ function App() {
         supabase.from('workouts').select('*').order('date', { ascending: false }),
         supabase.from('routines').select('*').order('name'),
       ]);
-
+      
       if (workoutsRes.error) throw workoutsRes.error;
       if (routinesRes.error) throw routinesRes.error;
-
+      
       if (workoutsRes.data) setWorkouts(workoutsRes.data as Workout[]);
       if (routinesRes.data) setRoutines(routinesRes.data as Routine[]);
 
@@ -98,7 +98,7 @@ function App() {
       await fetchAllData();
     }
   };
-
+  
   const handleEditRoutine = (routine: Routine) => {
     setEditingRoutine(routine);
     setCurrentView('create_routine');
@@ -117,7 +117,7 @@ function App() {
       library: 'Hareket Kütüphanesi'
     };
     return (
-      <header className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-4 shadow-lg sticky top-0 z-20">
+      <header className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-4 shadow-lg">
         <div className="max-w-md mx-auto flex items-center justify-between">
           <div className="w-10">
             {(currentView !== 'routines' && currentView !== 'calendar') && (
@@ -143,25 +143,25 @@ function App() {
     if (loading) {
       return <div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div></div>;
     }
-
+    
     switch (currentView) {
       case 'routines':
-        return <RoutinesList
-          routines={routines}
+        return <RoutinesList 
+          routines={routines} 
           onAddNewRoutine={() => { setEditingRoutine(null); setCurrentView('create_routine'); }}
           onEditRoutine={handleEditRoutine}
           onDeleteRoutine={handleDeleteRoutine}
         />;
       case 'create_routine':
-        return <CreateRoutine
-          existingRoutine={editingRoutine}
-          onSaveRoutine={handleSaveRoutine}
-          onCancel={() => { setEditingRoutine(null); setCurrentView('routines'); }}
+        return <CreateRoutine 
+          existingRoutine={editingRoutine} 
+          onSaveRoutine={handleSaveRoutine} 
+          onCancel={() => { setEditingRoutine(null); setCurrentView('routines'); }} 
         />;
       case 'calendar':
-        return <WorkoutCalendar
-          workouts={workouts}
-          onDateSelect={(date) => {
+        return <WorkoutCalendar 
+          workouts={workouts} 
+          onDateSelect={(date) => { 
             setSelectedDate(date);
             const workoutForDate = workouts.find(w => w.date === date);
             if (workoutForDate) {
@@ -170,19 +170,19 @@ function App() {
               setEditingWorkout(null);
               setCurrentView('add');
             }
-          }}
+          }} 
         />;
       case 'add':
-        return <AddWorkout
-          date={selectedDate}
-          existingWorkout={editingWorkout}
+        return <AddWorkout 
+          date={selectedDate} 
+          existingWorkout={editingWorkout} 
           routines={routines}
-          onSave={handleSaveWorkout}
-          onCancel={() => { setEditingWorkout(null); setCurrentView('calendar'); }}
+          onSave={handleSaveWorkout} 
+          onCancel={() => { setEditingWorkout(null); setCurrentView('calendar'); }} 
         />;
       case 'details':
         const selectedWorkout = workouts.find(w => w.date === selectedDate);
-        return selectedWorkout ? <WorkoutDetails
+        return selectedWorkout ? <WorkoutDetails 
           workout={selectedWorkout}
           date={selectedDate}
           workouts={workouts}
@@ -192,9 +192,9 @@ function App() {
         /> : null;
       case 'progress':
         return <ProgressCharts workouts={workouts} />;
-
+      
       case 'library':
-        return <ExerciseLibrary
+        return <ExerciseLibrary 
             onExerciseSelect={(exercise) => {
                 const today = new Date().toISOString().split('T')[0];
                 const newWorkoutFromLibrary: Workout = {
@@ -210,7 +210,7 @@ function App() {
                 setSelectedDate(today);
                 setCurrentView('add');
             }}
-            onBack={() => setCurrentView('calendar')}
+            onBack={() => setCurrentView('calendar')} 
         />;
       default: return null;
     }
@@ -218,7 +218,7 @@ function App() {
 
   const renderBottomNav = () => {
     return (
-      <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-lg z-20">
+      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-lg">
         <div className="max-w-md mx-auto flex justify-around">
             <button onClick={() => setCurrentView('calendar')} className={`flex flex-col items-center gap-1 w-1/4 ${currentView === 'calendar' ? 'text-blue-500' : 'text-gray-600 dark:text-gray-300'}`}>
                 <Calendar size={24} />
@@ -237,14 +237,14 @@ function App() {
                 <span className="text-xs">İstatistik</span>
             </button>
         </div>
-      </nav>
+      </div>
     )
   };
 
   return (
-    <div className="h-full bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {renderHeader()}
-      <main className="max-w-md mx-auto pb-28">
+      <main className="max-w-md mx-auto pb-24">
         {renderContent()}
       </main>
       {renderBottomNav()}
