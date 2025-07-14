@@ -165,7 +165,7 @@ function App() {
     if (currentView !== 'calendar') return null;
 
     return (
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-lg">
+      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4 shadow-lg">
         <div className="max-w-md mx-auto flex justify-center gap-4">
           <button
             onClick={() => {
@@ -199,7 +199,7 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {renderHeader()}
       <main className="max-w-md mx-auto pb-24">
         {renderContent()}

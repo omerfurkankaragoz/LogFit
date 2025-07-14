@@ -10,6 +10,14 @@ interface ProgressChartsProps {
 
 const ProgressCharts: React.FC<ProgressChartsProps> = ({ workouts }) => {
   const [selectedExercise, setSelectedExercise] = useState<string>('');
+  const isDarkMode = document.documentElement.classList.contains('dark');
+
+  const chartStyles = {
+    gridColor: isDarkMode ? '#4A5568' : '#e5e7eb',
+    tickColor: isDarkMode ? '#A0AEC0' : '#6b7280',
+    tooltipBg: isDarkMode ? '#2D3748' : '#ffffff',
+    tooltipText: isDarkMode ? '#E2E8F0' : '#374151',
+  };
 
   // Tüm egzersizleri al
   const allExercises = useMemo(() => {
@@ -74,10 +82,10 @@ const ProgressCharts: React.FC<ProgressChartsProps> = ({ workouts }) => {
     return (
       <div className="p-4">
         <div className="text-center py-8">
-          <h3 className="text-lg font-medium text-gray-600 mb-2">
+          <h3 className="text-lg font-medium text-gray-600 dark:text-gray-400 mb-2">
             Henüz veri yok
           </h3>
-          <p className="text-gray-500">
+          <p className="text-gray-500 dark:text-gray-500">
             Grafikleri görmek için önce antrenman kayıtları eklemelisiniz.
           </p>
         </div>
@@ -88,22 +96,24 @@ const ProgressCharts: React.FC<ProgressChartsProps> = ({ workouts }) => {
   return (
     <div className="p-4 space-y-6">
       {/* Genel İstatistikler */}
-      <div className="bg-white rounded-xl p-4 shadow-sm">
-        <h3 className="font-semibold text-gray-800 mb-4">Genel İlerleme</h3>
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
+        <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-4">Genel İlerleme</h3>
         
         {/* Toplam Volüm Grafiği */}
         <div className="mb-6">
-          <h4 className="text-sm font-medium text-gray-600 mb-2">Toplam Volüm (kg)</h4>
+          <h4 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Toplam Volüm (kg)</h4>
           <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={generalStats}>
-                <CartesianGrid strokeDasharray="3 3" />
+                <CartesianGrid strokeDasharray="3 3" stroke={chartStyles.gridColor} />
                 <XAxis 
                   dataKey="dateFormatted" 
-                  tick={{ fontSize: 12 }}
+                  tick={{ fontSize: 12, fill: chartStyles.tickColor }}
                 />
-                <YAxis tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12, fill: chartStyles.tickColor }} />
                 <Tooltip 
+                  contentStyle={{ backgroundColor: chartStyles.tooltipBg, border: 'none', borderRadius: '0.5rem' }}
+                  labelStyle={{ color: chartStyles.tooltipText }}
                   labelFormatter={(label) => `Tarih: ${label}`}
                   formatter={(value: number) => [`${value.toFixed(0)} kg`, 'Toplam Volüm']}
                 />
@@ -121,17 +131,19 @@ const ProgressCharts: React.FC<ProgressChartsProps> = ({ workouts }) => {
 
         {/* Set Sayısı Grafiği */}
         <div>
-          <h4 className="text-sm font-medium text-gray-600 mb-2">Toplam Set Sayısı</h4>
+          <h4 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Toplam Set Sayısı</h4>
           <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={generalStats}>
-                <CartesianGrid strokeDasharray="3 3" />
+                <CartesianGrid strokeDasharray="3 3" stroke={chartStyles.gridColor} />
                 <XAxis 
                   dataKey="dateFormatted" 
-                  tick={{ fontSize: 12 }}
+                  tick={{ fontSize: 12, fill: chartStyles.tickColor }}
                 />
-                <YAxis tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12, fill: chartStyles.tickColor }} />
                 <Tooltip 
+                  contentStyle={{ backgroundColor: chartStyles.tooltipBg, border: 'none', borderRadius: '0.5rem' }}
+                  labelStyle={{ color: chartStyles.tooltipText }}
                   labelFormatter={(label) => `Tarih: ${label}`}
                   formatter={(value: number) => [value, 'Toplam Set']}
                 />
@@ -147,15 +159,15 @@ const ProgressCharts: React.FC<ProgressChartsProps> = ({ workouts }) => {
       </div>
 
       {/* Hareket Bazlı İstatistikler */}
-      <div className="bg-white rounded-xl p-4 shadow-sm">
-        <h3 className="font-semibold text-gray-800 mb-4">Hareket Bazlı İlerleme</h3>
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
+        <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-4">Hareket Bazlı İlerleme</h3>
         
         {/* Hareket Seçimi */}
         <div className="mb-4">
           <select
             value={selectedExercise}
             onChange={(e) => setSelectedExercise(e.target.value)}
-            className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full p-3 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
           >
             <option value="">Hareket seçin</option>
             {allExercises.map(exercise => (
@@ -170,19 +182,21 @@ const ProgressCharts: React.FC<ProgressChartsProps> = ({ workouts }) => {
           <div className="space-y-6">
             {/* Maksimum Ağırlık */}
             <div>
-              <h4 className="text-sm font-medium text-gray-600 mb-2">
+              <h4 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
                 Maksimum Ağırlık - {selectedExercise}
               </h4>
               <div className="h-48">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={exerciseData}>
-                    <CartesianGrid strokeDasharray="3 3" />
+                    <CartesianGrid strokeDasharray="3 3" stroke={chartStyles.gridColor} />
                     <XAxis 
                       dataKey="dateFormatted" 
-                      tick={{ fontSize: 12 }}
+                      tick={{ fontSize: 12, fill: chartStyles.tickColor }}
                     />
-                    <YAxis tick={{ fontSize: 12 }} />
+                    <YAxis tick={{ fontSize: 12, fill: chartStyles.tickColor }} />
                     <Tooltip 
+                      contentStyle={{ backgroundColor: chartStyles.tooltipBg, border: 'none', borderRadius: '0.5rem' }}
+                      labelStyle={{ color: chartStyles.tooltipText }}
                       labelFormatter={(label) => `Tarih: ${label}`}
                       formatter={(value: number) => [`${value} kg`, 'Maks Ağırlık']}
                     />
@@ -200,19 +214,21 @@ const ProgressCharts: React.FC<ProgressChartsProps> = ({ workouts }) => {
 
             {/* Volüm */}
             <div>
-              <h4 className="text-sm font-medium text-gray-600 mb-2">
+              <h4 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
                 Toplam Volüm - {selectedExercise}
               </h4>
               <div className="h-48">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={exerciseData}>
-                    <CartesianGrid strokeDasharray="3 3" />
+                    <CartesianGrid strokeDasharray="3 3" stroke={chartStyles.gridColor} />
                     <XAxis 
                       dataKey="dateFormatted" 
-                      tick={{ fontSize: 12 }}
+                      tick={{ fontSize: 12, fill: chartStyles.tickColor }}
                     />
-                    <YAxis tick={{ fontSize: 12 }} />
+                    <YAxis tick={{ fontSize: 12, fill: chartStyles.tickColor }} />
                     <Tooltip 
+                      contentStyle={{ backgroundColor: chartStyles.tooltipBg, border: 'none', borderRadius: '0.5rem' }}
+                      labelStyle={{ color: chartStyles.tooltipText }}
                       labelFormatter={(label) => `Tarih: ${label}`}
                       formatter={(value: number) => [`${value.toFixed(0)} kg`, 'Toplam Volüm']}
                     />
@@ -227,25 +243,25 @@ const ProgressCharts: React.FC<ProgressChartsProps> = ({ workouts }) => {
             </div>
 
             {/* Özet istatistikler */}
-            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200">
+            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
               <div className="text-center">
-                <div className="text-lg font-bold text-green-600">
+                <div className="text-lg font-bold text-green-600 dark:text-green-400">
                   {Math.max(...exerciseData.map(d => d.maxWeight))} kg
                 </div>
-                <div className="text-sm text-gray-600">En Yüksek Ağırlık</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">En Yüksek Ağırlık</div>
               </div>
               <div className="text-center">
-                <div className="text-lg font-bold text-purple-600">
+                <div className="text-lg font-bold text-purple-600 dark:text-purple-400">
                   {exerciseData.length}
                 </div>
-                <div className="text-sm text-gray-600">Toplam Antrenman</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">Toplam Antrenman</div>
               </div>
             </div>
           </div>
         )}
 
         {selectedExercise && exerciseData.length === 0 && (
-          <div className="text-center py-4 text-gray-500">
+          <div className="text-center py-4 text-gray-500 dark:text-gray-500">
             Bu hareket için henüz veri bulunmuyor.
           </div>
         )}
