@@ -35,7 +35,8 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
     setExercises(exercisesFromRoutine);
     setRoutinePickerOpen(false);
   };
-  // -------------------------
+  // -------------------------  
+
 
   const addExercise = () => {
     const newExercise: Exercise = {
@@ -84,7 +85,7 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
     ).map(ex => ({ ...ex, sets: ex.sets.filter(set => set.reps > 0 || set.weight > 0) }));
 
     if (validExercises.length === 0) {
-      alert('Kaydedilecek geçerli bir set bulunamadı.');
+      alert('Kaydedilecek bir set bulunamadı.');
       return;
     }
     onSave({ date, exercises: validExercises });
