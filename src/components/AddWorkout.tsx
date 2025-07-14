@@ -3,29 +3,26 @@ import { Plus, Trash2, Save } from 'lucide-react';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { Exercise, Workout } from '../App';
-import { Exercise as ApiExercise } from '../services/exerciseApi';
 
 interface AddWorkoutProps {
   date: string;
+  existingWorkout: Workout | null;
   onSave: (workout: Omit<Workout, 'id'>) => void;
   onCancel: () => void;
-  selectedExercise?: ApiExercise;
 }
 
-const AddWorkout: React.FC<AddWorkoutProps> = ({ date, onSave, onCancel, selectedExercise }) => {
+const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, onSave, onCancel }) => {
   const [exercises, setExercises] = useState<Exercise[]>([]);
 
-  // Seçilen egzersizi otomatik ekle
   useEffect(() => {
-    if (selectedExercise) {
-      const newExercise: Exercise = {
-        id: Date.now().toString(),
-        name: selectedExercise.name,
-        sets: [{ reps: 0, weight: 0 }]
-      };
-      setExercises(prev => [...prev, newExercise]);
+    // Düzenleme için mevcut bir antrenman varsa, onun verilerini yükle.
+    // Yoksa (yeni antrenman ekleniyorsa), egzersiz listesini boşalt.
+    if (existingWorkout) {
+      setExercises(existingWorkout.exercises);
+    } else {
+      setExercises([]);
     }
-  }, [selectedExercise]);
+  }, [existingWorkout]);
 
   const addExercise = () => {
     const newExercise: Exercise = {
@@ -48,15 +45,24 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, onSave, onCancel, selecte
     );
   };
 
+  // *** YENİ addSet FONKSİYONU ***
   const addSet = (exerciseId: string) => {
     setExercises(prev =>
-      prev.map(ex =>
-        ex.id === exerciseId
-          ? { ...ex, sets: [...ex.sets, { reps: 0, weight: 0 }] }
-          : ex
-      )
+      prev.map(ex => {
+        if (ex.id === exerciseId) {
+          // Eklenecek yeni set için bir önceki setin verilerini al
+          const lastSet = ex.sets.length > 0 ? ex.sets[ex.sets.length - 1] : { reps: 0, weight: 0 };
+          return {
+            ...ex,
+            // Yeni seti, son setin değerleriyle oluştur
+            sets: [...ex.sets, { reps: lastSet.reps, weight: lastSet.weight }]
+          };
+        }
+        return ex;
+      })
     );
   };
+
 
   const removeSet = (exerciseId: string, setIndex: number) => {
     setExercises(prev =>
@@ -84,12 +90,17 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, onSave, onCancel, selecte
   };
 
   const handleSave = () => {
+    // Sadece adı girilmiş ve içinde geçerli en az bir set bulunan egzersizleri al
     const validExercises = exercises.filter(ex => 
-      ex.name.trim() && ex.sets.some(set => set.reps > 0 && set.weight > 0)
-    );
+      ex.name.trim() && ex.sets.some(set => set.reps > 0 || set.weight > 0)
+    ).map(ex => ({
+        ...ex,
+        // Sadece geçerli setleri (tekrar veya ağırlığı olan) tut
+        sets: ex.sets.filter(set => set.reps > 0 || set.weight > 0)
+    }));
 
     if (validExercises.length === 0) {
-      alert('En az bir hareket ve set eklemelisiniz!');
+      alert('Kaydedilecek geçerli bir set bulunamadı. Lütfen en az bir tekrar veya ağırlık girin.');
       return;
     }
 
@@ -112,7 +123,6 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, onSave, onCancel, selecte
         </h2>
       </div>
 
-      {/* Hızlı hareket seçimi */}
       <div className="mb-6">
         <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Popüler Hareketler</h3>
         <div className="flex flex-wrap gap-2">
@@ -135,9 +145,8 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, onSave, onCancel, selecte
         </div>
       </div>
 
-      {/* Egzersizler */}
       <div className="space-y-6">
-        {exercises.map((exercise, exerciseIndex) => (
+        {exercises.map((exercise) => (
           <div key={exercise.id} className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
             <div className="flex items-center gap-2 mb-4">
               <input
@@ -155,7 +164,6 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, onSave, onCancel, selecte
               </button>
             </div>
 
-            {/* Setler */}
             <div className="space-y-2">
               <div className="grid grid-cols-4 gap-2 text-sm font-medium text-gray-600 dark:text-gray-400 px-2">
                 <span>Set</span>
@@ -171,6 +179,7 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, onSave, onCancel, selecte
                   </span>
                   <input
                     type="number"
+                    inputMode="numeric" 
                     value={set.reps || ''}
                     onChange={(e) => updateSet(exercise.id, setIndex, 'reps', parseInt(e.target.value) || 0)}
                     placeholder="0"
@@ -178,6 +187,7 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, onSave, onCancel, selecte
                   />
                   <input
                     type="number"
+                    inputMode="numeric"
                     value={set.weight || ''}
                     onChange={(e) => updateSet(exercise.id, setIndex, 'weight', parseFloat(e.target.value) || 0)}
                     placeholder="0"
@@ -206,7 +216,6 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, onSave, onCancel, selecte
         ))}
       </div>
 
-      {/* Hareket ekle butonu */}
       <button
         onClick={addExercise}
         className="w-full mt-6 p-4 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-xl border-2 border-gray-200 dark:border-gray-600 border-dashed hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center justify-center gap-2"
@@ -215,7 +224,6 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, onSave, onCancel, selecte
         Hareket Ekle
       </button>
 
-      {/* Kaydet/İptal butonları */}
       <div className="flex gap-3 mt-8">
         <button
           onClick={onCancel}
