@@ -1,19 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Dumbbell, BarChart3, ArrowLeft, Home, BookOpen } from 'lucide-react'; // BookOpen ikonu eklendi
+import { Calendar, Dumbbell, BarChart3, ArrowLeft, BookOpen } from 'lucide-react';
 import WorkoutCalendar from './components/WorkoutCalendar';
 import AddWorkout from './components/AddWorkout';
 import WorkoutDetails from './components/WorkoutDetails';
 import ProgressCharts from './components/ProgressCharts';
 import RoutinesList, { Routine } from './components/RoutinesList';
 import CreateRoutine from './components/CreateRoutine';
-import ExerciseLibrary from './components/ExerciseLibrary'; // ExerciseLibrary import edildi
+import ExerciseLibrary from './components/ExerciseLibrary';
 import { supabase } from './services/supabaseClient';
-import { Exercise as ApiExercise, getExercises } from './services/exerciseApi';
 
-// --- Arayüzler (Interfaces) ---
+// Arayüzler (Interfaces)
 export interface Exercise {
   id: string;
-  name: string;
+  name:string;
   sets: { reps: number; weight: number }[];
 }
 export interface Workout {
@@ -22,34 +21,38 @@ export interface Workout {
   exercises: Exercise[];
 }
 
-// *** 1. DEĞİŞİKLİK: View tipine 'library' eklendi ***
 type View = 'calendar' | 'add' | 'details' | 'progress' | 'routines' | 'create_routine' | 'library';
 
 function App() {
-  // --- State Yönetimi ---
+  // State Yönetimi
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [routines, setRoutines] = useState<Routine[]>([]);
-  const [allExercises, setAllExercises] = useState<ApiExercise[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentView, setCurrentView] = useState<View>('calendar');
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [editingWorkout, setEditingWorkout] = useState<Workout | null>(null);
   const [editingRoutine, setEditingRoutine] = useState<Routine | null>(null);
 
-  // --- Veri Çekme ---
+  // Veri Çekme (getExercises çağrısı kaldırıldı)
   const fetchAllData = async () => {
     setLoading(true);
-    const [workoutsRes, routinesRes, exercisesRes] = await Promise.all([
-      supabase.from('workouts').select('*').order('date', { ascending: false }),
-      supabase.from('routines').select('*').order('name'),
-      getExercises()
-    ]);
-    
-    if (workoutsRes.data) setWorkouts(workoutsRes.data as Workout[]);
-    if (routinesRes.data) setRoutines(routinesRes.data as Routine[]);
-    if (exercisesRes) setAllExercises(exercisesRes);
+    try {
+      const [workoutsRes, routinesRes] = await Promise.all([
+        supabase.from('workouts').select('*').order('date', { ascending: false }),
+        supabase.from('routines').select('*').order('name'),
+      ]);
+      
+      if (workoutsRes.error) throw workoutsRes.error;
+      if (routinesRes.error) throw routinesRes.error;
+      
+      if (workoutsRes.data) setWorkouts(workoutsRes.data as Workout[]);
+      if (routinesRes.data) setRoutines(routinesRes.data as Routine[]);
 
-    setLoading(false);
+    } catch (error) {
+      console.error("Veri çekme hatası:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -60,26 +63,19 @@ function App() {
 
   const handleSaveWorkout = async (workoutData: Omit<Workout, 'id'|'created_at'>) => {
     const workoutToUpdate = editingWorkout;
-    
     if (workoutToUpdate && workoutToUpdate.id !== 'new') {
       await supabase.from('workouts').update({ exercises: workoutData.exercises }).eq('id', workoutToUpdate.id);
     } else {
       await supabase.from('workouts').insert([{ date: workoutData.date, exercises: workoutData.exercises }]);
     }
-    
     setEditingWorkout(null);
     await fetchAllData();
     setCurrentView('calendar');
   };
 
-  const handleDeleteWorkout = async (workoutId: string) => {
-    await supabase.from('workouts').delete().eq('id', workoutId);
-    await fetchAllData();
-    setCurrentView('calendar');
-  };
-
-  const handleSaveRoutine = async (id: string | null, name: string, exercises: ApiExercise[]) => {
-    const routineData = { name, exercises: exercises.map(({id, name}) => ({id, name})) };
+  // DÜZELTME: Bu fonksiyon, artık CreateRoutine'den gelen doğru veri formatını ({id, name}[]) kabul ediyor.
+  const handleSaveRoutine = async (id: string | null, name: string, exercises: { id: string; name: string }[]) => {
+    const routineData = { name, exercises }; // Gelen veri zaten doğru formatta
     if (id) {
       await supabase.from('routines').update(routineData).eq('id', id);
     } else {
@@ -90,8 +86,14 @@ function App() {
     setCurrentView('routines');
   };
 
+  const handleDeleteWorkout = async (workoutId: string) => {
+    await supabase.from('workouts').delete().eq('id', workoutId);
+    await fetchAllData();
+    setCurrentView('calendar');
+  };
+
   const handleDeleteRoutine = async (routineId: string) => {
-    if (confirm("Bu rutini silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.")) {
+    if (confirm("Bu rutini silmek istediğinizden emin misiniz?")) {
       await supabase.from('routines').delete().eq('id', routineId);
       await fetchAllData();
     }
@@ -112,7 +114,7 @@ function App() {
       progress: 'İstatistikler',
       routines: 'Rutinlerim',
       create_routine: editingRoutine ? 'Rutini Düzenle' : 'Yeni Rutin Oluştur',
-      library: 'Hareket Kütüphanesi' // YENİ
+      library: 'Hareket Kütüphanesi'
     };
     return (
       <header className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-4 shadow-lg">
@@ -175,30 +177,28 @@ function App() {
           date={selectedDate} 
           existingWorkout={editingWorkout} 
           routines={routines}
-          allExercises={allExercises}
           onSave={handleSaveWorkout} 
           onCancel={() => { setEditingWorkout(null); setCurrentView('calendar'); }} 
         />;
       case 'details':
         const selectedWorkout = workouts.find(w => w.date === selectedDate);
-        return <WorkoutDetails 
-          workout={selectedWorkout} 
-          date={selectedDate} 
-          workouts={workouts} 
-          onEdit={() => { if (selectedWorkout) { setEditingWorkout(selectedWorkout); setCurrentView('add'); }}} 
-          onDelete={handleDeleteWorkout}
-          onUpdate={(id, data) => handleSaveWorkout({id, ...data})} 
-        />;
+        return selectedWorkout ? <WorkoutDetails 
+          workout={selectedWorkout}
+          date={selectedDate}
+          workouts={workouts}
+          onEdit={() => { setEditingWorkout(selectedWorkout); setCurrentView('add'); }}
+          onDelete={() => handleDeleteWorkout(selectedWorkout.id)}
+          onUpdate={(id, data) => handleSaveWorkout({ id, ...data })}
+        /> : null;
       case 'progress':
         return <ProgressCharts workouts={workouts} />;
       
-      // *** 2. DEĞİŞİKLİK: library case'i eklendi ***
       case 'library':
         return <ExerciseLibrary 
             onExerciseSelect={(exercise) => {
                 const today = new Date().toISOString().split('T')[0];
                 const newWorkoutFromLibrary: Workout = {
-                    id: 'new', // Yeni olduğunu belirt
+                    id: 'new',
                     date: today,
                     exercises: [{
                         id: Date.now().toString(),
@@ -210,14 +210,13 @@ function App() {
                 setSelectedDate(today);
                 setCurrentView('add');
             }}
-            onBack={() => setCurrentView('routines')} 
+            onBack={() => setCurrentView('calendar')} 
         />;
       default: return null;
     }
   };
 
   const renderBottomNav = () => {
-    // *** 3. DEĞİŞİKLİK: Navigasyon barına yeni buton eklendi ***
     return (
       <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-lg">
         <div className="max-w-md mx-auto flex justify-around">
