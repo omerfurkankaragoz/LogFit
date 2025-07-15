@@ -42,6 +42,7 @@ const WorkoutDetails: React.FC<WorkoutDetailsProps> = ({
   };
 
   const getMaxWeight = (exercise: Exercise) => {
+    if (exercise.sets.length === 0) return 0;
     return Math.max(...exercise.sets.map(set => set.weight));
   };
 
@@ -50,9 +51,10 @@ const WorkoutDetails: React.FC<WorkoutDetailsProps> = ({
   };
 
   const getWorkoutStats = (workout: Workout) => {
-    const totalSets = workout.exercises.reduce((total, ex) => total + ex.sets.length, 0);
-    const totalVolume = workout.exercises.reduce((total, ex) => total + getTotalVolume(ex), 0);
-    const exerciseCount = workout.exercises.length;
+    const exercisesWithData = workout.exercises.filter(ex => ex.sets.length > 0);
+    const totalSets = exercisesWithData.reduce((total, ex) => total + ex.sets.length, 0);
+    const totalVolume = exercisesWithData.reduce((total, ex) => total + getTotalVolume(ex), 0);
+    const exerciseCount = exercisesWithData.length;
 
     return { totalSets, totalVolume, exerciseCount };
   };
@@ -80,6 +82,29 @@ const WorkoutDetails: React.FC<WorkoutDetailsProps> = ({
   }
 
   const stats = getWorkoutStats(workout);
+  const exercisesToShow = workout.exercises.filter(ex => ex.sets && ex.sets.length > 0);
+
+  if (exercisesToShow.length === 0) {
+    return (
+        <div className="p-4">
+             <div className="text-center py-8">
+                <Calendar size={48} className="mx-auto text-gray-400 dark:text-gray-500 mb-4" />
+                <h3 className="text-lg font-medium text-gray-600 dark:text-gray-400 mb-2">
+                    Henüz Veri Girilmedi
+                </h3>
+                <p className="text-gray-500 dark:text-gray-500 mb-6">
+                    {formatDate(date)} antrenmanı için planlanmış hareketler var, ancak henüz set/tekrar bilgisi girilmemiş.
+                </p>
+                <button
+                    onClick={onEdit}
+                    className="bg-blue-600 text-white py-2 px-6 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 mx-auto"
+                >
+                    <Edit size={18} /> Antrenmana Devam Et
+                </button>
+            </div>
+        </div>
+    )
+  }
 
   return (
     <div className="p-4">
@@ -142,7 +167,7 @@ const WorkoutDetails: React.FC<WorkoutDetailsProps> = ({
 
       {/* Egzersizler */}
       <div className="space-y-4">
-        {workout.exercises.map((exercise) => {
+        {exercisesToShow.map((exercise) => {
           const previousData = getPreviousWorkout(exercise.name);
           const currentMax = getMaxWeight(exercise);
           const currentVolume = getTotalVolume(exercise);
