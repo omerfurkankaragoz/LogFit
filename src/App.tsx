@@ -164,7 +164,6 @@ function App() {
         if (exerciseExists) {
              alert(`"${newExercise.name}" zaten bugünkü antrenmanınızda mevcut.`);
         } else {
-            // DEĞİŞİKLİK BURADA: Yeni egzersizi listenin başına ekliyoruz.
             const updatedExercises = [newExercise, ...workoutToEdit.exercises];
             setEditingWorkout({ ...workoutToEdit, exercises: updatedExercises });
         }
@@ -179,6 +178,15 @@ function App() {
     }
     
     setSelectedDate(todayStr);
+    handleSetView('add');
+  };
+
+  const handleStartOrContinueWorkout = () => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const workoutForToday = workouts.find(w => w.date === todayStr);
+
+    setSelectedDate(todayStr);
+    setEditingWorkout(workoutForToday || null);
     handleSetView('add');
   };
 
@@ -267,6 +275,7 @@ function App() {
               handleSetView('add');
             }
           }} 
+          onStartWorkout={handleStartOrContinueWorkout}
         />;
       case 'add':
         return <AddWorkout 

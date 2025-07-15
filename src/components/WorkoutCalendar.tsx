@@ -1,3 +1,5 @@
+// src/components/WorkoutCalendar.tsx
+
 import React, { useState } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, parseISO, startOfWeek, endOfWeek } from 'date-fns';
 import { tr } from 'date-fns/locale';
@@ -7,22 +9,23 @@ import { Workout } from '../App';
 interface WorkoutCalendarProps {
   workouts: Workout[];
   onDateSelect: (date: string) => void;
+  // Yeni prop'u ekliyoruz
+  onStartWorkout: () => void;
 }
 
-const WorkoutCalendar: React.FC<WorkoutCalendarProps> = ({ workouts, onDateSelect }) => {
+const WorkoutCalendar: React.FC<WorkoutCalendarProps> = ({ workouts, onDateSelect, onStartWorkout }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
-
-  // DÜZELTME BAŞLANGICI: Haftanın başlangıcını Pazartesi olarak ayarlayarak takvim görünümünü düzeltme
-  const startOfCalendar = startOfWeek(monthStart, { locale: tr, weekStartsOn: 1 }); // Haftayı Pazartesi başlat
-  const endOfCalendar = endOfWeek(monthEnd, { locale: tr, weekStartsOn: 1 });     // Haftayı Pazar bitir
-
+  const startOfCalendar = startOfWeek(monthStart, { locale: tr, weekStartsOn: 1 });
+  const endOfCalendar = endOfWeek(monthEnd, { locale: tr, weekStartsOn: 1 });
   const monthDays = eachDayOfInterval({ start: startOfCalendar, end: endOfCalendar });
-  // DÜZELTME SONU
-
   const workoutDates = new Set(workouts.map(w => w.date));
+
+  // O güne ait antrenman olup olmadığını kontrol etmek için mantık ekliyoruz
+  const todayStr = new Date().toISOString().split('T')[0];
+  const workoutForToday = workouts.find(w => w.date === todayStr);
 
   const handlePrevMonth = () => {
     setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1));
@@ -41,6 +44,7 @@ const WorkoutCalendar: React.FC<WorkoutCalendarProps> = ({ workouts, onDateSelec
     <div className="p-4">
       {/* Ay navigasyonu */}
       <div className="flex items-center justify-between mb-6">
+        {/* ... mevcut navigasyon butonları ... */}
         <button
           onClick={handlePrevMonth}
           className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
@@ -59,6 +63,7 @@ const WorkoutCalendar: React.FC<WorkoutCalendarProps> = ({ workouts, onDateSelec
       </div>
 
       {/* Haftanın günleri */}
+      {/* ... mevcut haftanın günleri ... */}
       <div className="grid grid-cols-7 mb-2">
         {['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'].map(day => (
           <div key={day} className="text-center text-sm font-medium text-gray-500 dark:text-gray-400 py-2">
@@ -68,6 +73,7 @@ const WorkoutCalendar: React.FC<WorkoutCalendarProps> = ({ workouts, onDateSelec
       </div>
 
       {/* Takvim günleri */}
+      {/* ... mevcut takvim günleri ... */}
       <div className="grid grid-cols-7 gap-1">
         {monthDays.map(day => {
           const dateStr = format(day, 'yyyy-MM-dd');
@@ -100,6 +106,7 @@ const WorkoutCalendar: React.FC<WorkoutCalendarProps> = ({ workouts, onDateSelec
 
       {/* İstatistikler */}
       <div className="mt-8 bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
+        {/* ... mevcut istatistikleriniz ... */}
         <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-3">Bu Ay</h3>
         <div className="grid grid-cols-2 gap-4">
           <div className="text-center">
@@ -123,6 +130,19 @@ const WorkoutCalendar: React.FC<WorkoutCalendarProps> = ({ workouts, onDateSelec
           </div>
         </div>
       </div>
+
+      {/* YENİ BUTON ALANI */}
+      <div className="mt-6">
+        <button
+          onClick={onStartWorkout}
+          className="w-full flex items-center justify-center gap-3 py-4 px-6 bg-green-600 text-white rounded-2xl font-semibold text-lg shadow-lg hover:bg-green-700 transition-all duration-300 ease-in-out active:scale-95 transform hover:-translate-y-1"
+        >
+          <Dumbbell size={22} />
+          {/* Buton metni o güne ait antrenman olup olmamasına göre değişir */}
+          {workoutForToday ? 'Antrenmana Devam Et' : 'Antrenmana Başla'}
+        </button>
+      </div>
+
     </div>
   );
 };
