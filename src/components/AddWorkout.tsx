@@ -240,7 +240,7 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
       </div>
 
       {/* Kaydet/İptal Butonları */}
-      <div className="fixed bottom-16 left-0 right-0 z-10 border-t border-gray-200 bg-white/90 p-4 backdrop-blur-sm dark:border-gray-700 dark:bg-gray-800/90">
+      <div className="fixed bottom-24 left-0 right-0 z-10 border-t border-gray-200 bg-white/90 p-4 backdrop-blur-sm dark:border-gray-700 dark:bg-gray-800/90">
         <div className="mx-auto flex max-w-md gap-3">
           <button onClick={onCancel} className="flex-1 rounded-xl border border-gray-300 py-3 px-6 text-base font-medium text-gray-800 shadow-md transition-all duration-200 ease-in-out hover:bg-gray-100 active:scale-95 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">İptal</button>
           <button onClick={handleSave} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 px-6 text-base font-medium text-white shadow-md transition-all duration-200 ease-in-out hover:bg-blue-700 active:scale-95">
