@@ -1,6 +1,6 @@
 // src/components/ExerciseLibrary.tsx
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Plus, X } from 'lucide-react'; // X ikonu eklendi
+import { Search, Filter, Plus, X } from 'lucide-react';
 import { Exercise, getAllExercises, getBodyParts } from '../services/exerciseApi';
 
 const SUPABASE_PROJECT_URL = 'https://ekrhekungvoisfughwuz.supabase.co';
@@ -8,10 +8,10 @@ const BUCKET_NAME = 'images';
 
 interface ExerciseLibraryProps {
   onExerciseSelect: (exercise: Exercise) => void;
-  onBack: () => void;
+  onBack: () => void; // Bu prop kaldırıldı, çünkü App.tsx'deki yönlendirme header tarafından yapılıyor.
 }
 
-const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({ onExerciseSelect, onBack }) => {
+const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({ onExerciseSelect }) => {
   const [allExercises, setAllExercises] = useState<Exercise[]>([]);
   const [filteredExercises, setFilteredExercises] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(true);
@@ -20,7 +20,6 @@ const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({ onExerciseSelect, onB
   const [showFilters, setShowFilters] = useState(false);
   const [bodyParts, setBodyParts] = useState<string[]>([]);
 
-  // Yeni state'ler: Büyük görsel modalı için
   const [showLargeImage, setShowLargeImage] = useState(false);
   const [currentLargeImageUrl, setCurrentLargeImageUrl] = useState<string | null>(null);
 
@@ -78,7 +77,6 @@ const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({ onExerciseSelect, onB
     return names[bodyPart.toLowerCase()] || bodyPart.charAt(0).toUpperCase() + bodyPart.slice(1);
   };
 
-  // Yeni: Büyük görseli gösterme fonksiyonları
   const handleImageClick = (imageUrl: string) => {
     setCurrentLargeImageUrl(imageUrl);
     setShowLargeImage(true);
@@ -94,17 +92,17 @@ const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({ onExerciseSelect, onB
       <div className="space-y-4 mb-6">
         <div className="relative">
           <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" />
-          <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Hareket adı ara..." className="w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200" />
+          <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Hareket adı ara..." className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 text-base" />
         </div>
-        <button onClick={() => setShowFilters(!showFilters)} className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${showFilters ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'}`}>
+        <button onClick={() => setShowFilters(!showFilters)} className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-200 ease-in-out active:scale-95 text-sm font-medium ${showFilters ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'}`}>
           <Filter size={16} /> Filtreler
         </button>
         {showFilters && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-            <h3 className="font-medium text-gray-800 dark:text-gray-200 mb-3">Vücut Bölgesi</h3>
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+            <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-3 text-base">Vücut Bölgesi</h3>
             <div className="flex flex-wrap gap-2">
-              <button onClick={() => setSelectedBodyPart('all')} className={`px-3 py-2 rounded-lg text-sm transition-colors ${selectedBodyPart === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'}`}>Tümü</button>
-              {bodyParts.map(bodyPart => (<button key={bodyPart} onClick={() => setSelectedBodyPart(bodyPart)} className={`px-3 py-2 rounded-lg text-sm transition-colors flex items-center gap-1 ${selectedBodyPart === bodyPart ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'}`}><span>{getBodyPartEmoji(bodyPart)}</span>{getBodyPartName(bodyPart)}</button>))}
+              <button onClick={() => setSelectedBodyPart('all')} className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors hover:scale-[1.03] active:scale-95 ${selectedBodyPart === 'all' ? 'bg-blue-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'}`}>Tümü</button>
+              {bodyParts.map(bodyPart => (<button key={bodyPart} onClick={() => setSelectedBodyPart(bodyPart)} className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors flex items-center gap-1 hover:scale-[1.03] active:scale-95 ${selectedBodyPart === bodyPart ? 'bg-blue-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'}`}><span>{getBodyPartEmoji(bodyPart)}</span>{getBodyPartName(bodyPart)}</button>))}
             </div>
           </div>
         )}
@@ -115,10 +113,10 @@ const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({ onExerciseSelect, onB
           <div className="mb-4"><p className="text-sm text-gray-600 dark:text-gray-400">{filteredExercises.length} hareket bulundu</p></div>
           <div className="space-y-3">
             {filteredExercises.map(exercise => (
-              <div key={exercise.id} className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-shadow">
+              <div key={exercise.id} className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-lg border border-gray-100 dark:border-gray-700 hover:shadow-xl transform transition-all duration-200 ease-in-out hover:scale-[1.01]">
                 <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700 flex-shrink-0 cursor-pointer" // cursor-pointer eklendi
-                       onClick={() => handleImageClick(getImageUrl(exercise.gifUrl))}> {/* onClick eklendi */}
+                  <div className="w-20 h-20 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-700 flex-shrink-0 cursor-pointer shadow-sm"
+                       onClick={() => handleImageClick(getImageUrl(exercise.gifUrl))}>
                     <img 
                       src={getImageUrl(exercise.gifUrl)} 
                       alt={exercise.name} 
@@ -127,10 +125,15 @@ const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({ onExerciseSelect, onB
                     />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-gray-800 dark:text-gray-200 truncate">{exercise.name}</h3>
-                    <div className="flex items-center gap-2 mt-1"><span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 px-2 py-1 rounded-full">{getBodyPartName(exercise.bodyPart)}</span><span className="text-xs bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 px-2 py-1 rounded-full">{exercise.equipment}</span></div>
+                    <h3 className="font-semibold text-lg text-gray-800 dark:text-gray-200 truncate mb-1">{exercise.name}</h3>
+                    <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 px-3 py-1 rounded-full font-medium">{getBodyPartName(exercise.bodyPart)}</span>
+                        <span className="text-xs bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 px-3 py-1 rounded-full font-medium">{exercise.equipment}</span>
+                    </div>
                   </div>
-                  <button onClick={() => handleExerciseSelect(exercise)} className="p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex-shrink-0"><Plus size={20} /></button>
+                  <button onClick={() => handleExerciseSelect(exercise)} className="p-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all duration-200 ease-in-out active:scale-95 shadow-md flex-shrink-0">
+                    <Plus size={20} />
+                  </button>
                 </div>
               </div>
             ))}
@@ -138,21 +141,20 @@ const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({ onExerciseSelect, onB
         </>
       )}
 
-      {/* Yeni: Büyük görsel modalı */}
       {showLargeImage && currentLargeImageUrl && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4" onClick={closeLargeImage}>
-          <div className="relative bg-white dark:bg-gray-800 rounded-lg p-2 max-w-full max-h-full overflow-hidden" onClick={(e) => e.stopPropagation()}> {/* Propagasyonu durdurarak modal dışı tıklamayı engelle */}
+          <div className="relative bg-white dark:bg-gray-800 rounded-2xl p-3 max-w-full max-h-full overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <button
               onClick={closeLargeImage}
-              className="absolute top-2 right-2 text-white bg-gray-800 dark:bg-gray-700 rounded-full p-2 hover:bg-gray-900 dark:hover:bg-gray-600 transition-colors"
+              className="absolute top-3 right-3 text-white bg-gray-800 dark:bg-gray-700 rounded-full p-2 hover:bg-gray-900 dark:hover:bg-gray-600 transition-colors z-10"
             >
               <X size={24} />
             </button>
             <img
               src={currentLargeImageUrl}
               alt="Büyük Egzersiz Görseli"
-              className="max-w-[80vw] max-h-[80vh] object-contain mx-auto" // Ekran boyutlarına göre ayarla
-              onError={(e) => { e.currentTarget.src = 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=800'; }} // Hata durumunda daha büyük bir varsayılan
+              className="max-w-[80vw] max-h-[80vh] object-contain mx-auto rounded-xl"
+              onError={(e) => { e.currentTarget.src = 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=800'; }}
             />
           </div>
         </div>

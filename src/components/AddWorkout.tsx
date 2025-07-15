@@ -1,6 +1,6 @@
 // src/components/AddWorkout.tsx
 import React, { useState, useEffect, useMemo } from 'react';
-import { Plus, Trash2, Save, BookCopy, Search, Filter, X } from 'lucide-react'; // X ikonu eklendi
+import { Plus, Trash2, Save, BookCopy, Search, Filter, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { Exercise, Workout } from '../App';
@@ -199,17 +199,17 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
 
   return (
     <div className="p-4 space-y-6">
-      <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
-          {format(new Date(date), 'dd MMMM yyyy', { locale: tr })}
+      <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-4">
+          {format(new Date(date), 'dd MMMM yyyy', { locale: tr })} Antrenmanı
       </h2>
       
       {/* Section 1: Workout List */}
-      <div>
-        <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 border-b pb-2 mb-4 border-gray-200 dark:border-gray-700">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-100 dark:border-gray-700">
+        <h3 className="font-semibold text-lg text-gray-800 dark:text-gray-100 mb-4">
           Antrenman Listesi
         </h3>
         {workoutExercises.length === 0 ? (
-            <p className="text-center text-gray-500 py-4">Başlamak için aşağıdaki listeden bir hareket ekleyin.</p>
+            <p className="text-center text-gray-500 dark:text-gray-400 py-4 text-md">Başlamak için aşağıdaki listeden bir hareket ekleyin.</p>
         ) : (
             <div className="space-y-6">
             {workoutExercises.map((exercise) => {
@@ -219,10 +219,10 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
                     : null;
 
                 return (
-                <div key={exercise.id} className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
+                <div key={exercise.id} className="bg-gray-50 dark:bg-gray-700 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-600">
                     <div className="flex items-center gap-2 mb-4">
-                        <input type="text" value={exercise.name} onChange={(e) => updateExerciseName(exercise.id, e.target.value)} placeholder="Hareket adı" className="flex-1 p-3 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200" />
-                        <button onClick={() => removeWorkoutExercise(exercise.id)} className="p-3 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/50 rounded-lg transition-colors"> <Trash2 size={20} /> </button>
+                        <input type="text" value={exercise.name} onChange={(e) => updateExerciseName(exercise.id, e.target.value)} placeholder="Hareket adı" className="flex-1 p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 text-base" />
+                        <button onClick={() => removeWorkoutExercise(exercise.id)} className="p-3 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-lg transition-colors active:scale-95"> <Trash2 size={20} /> </button>
                     </div>
                     <div className="space-y-2">
                     <div className="grid grid-cols-5 gap-2 text-sm font-medium text-gray-600 dark:text-gray-400 px-1">
@@ -234,17 +234,17 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
                     </div>
                     {exercise.sets.map((set, setIndex) => (
                         <div key={setIndex} className="grid grid-cols-5 gap-2 items-center">
-                        <span className="text-center font-medium text-gray-500 dark:text-gray-400">{setIndex + 1}</span>
-                        <div className="text-center text-xs font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/50 p-2 rounded-md h-full flex items-center justify-center">
+                        <span className="text-center font-medium text-gray-600 dark:text-gray-300 text-sm">{setIndex + 1}</span>
+                        <div className="text-center text-xs font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 p-2 rounded-md h-full flex items-center justify-center">
                             {previousMaxWeight !== null ? `${previousMaxWeight}kg` : '-'}
                         </div>
-                        <input type="number" inputMode="numeric" value={set.weight || ''} onChange={(e) => updateSet(exercise.id, setIndex, 'weight', parseFloat(e.target.value) || 0)} placeholder="0" step="0.5" className="p-2 border border-gray-200 dark:border-gray-700 rounded-lg text-center focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200" />
-                        <input type="number" inputMode="numeric" value={set.reps || ''} onChange={(e) => updateSet(exercise.id, setIndex, 'reps', parseInt(e.target.value) || 0)} placeholder="0" className="p-2 border border-gray-200 dark:border-gray-700 rounded-lg text-center focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200" />
-                        <button onClick={() => removeSet(exercise.id, setIndex)} className="text-gray-400 hover:text-red-500 m-auto"> <Trash2 size={16}/> </button>
+                        <input type="number" inputMode="numeric" value={set.weight || ''} onChange={(e) => updateSet(exercise.id, setIndex, 'weight', parseFloat(e.target.value) || 0)} placeholder="0" step="0.5" className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg text-center focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 text-base" />
+                        <input type="number" inputMode="numeric" value={set.reps || ''} onChange={(e) => updateSet(exercise.id, setIndex, 'reps', parseInt(e.target.value) || 0)} placeholder="0" className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg text-center focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 text-base" />
+                        <button onClick={() => removeSet(exercise.id, setIndex)} className="text-gray-400 hover:text-red-500 m-auto p-1 rounded-md transition-colors active:scale-95"> <Trash2 size={18}/> </button>
                         </div>
                     ))}
                     </div>
-                    <button onClick={() => addSet(exercise.id)} className="w-full mt-3 p-2 text-blue-600 border-2 border-blue-200 dark:border-blue-800 border-dashed rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/50 transition-colors"> + Set Ekle </button>
+                    <button onClick={() => addSet(exercise.id)} className="w-full mt-4 p-2 text-blue-600 border-2 border-blue-200 dark:border-blue-800 border-dashed rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/50 transition-colors active:scale-95 text-base font-medium"> + Set Ekle </button>
                 </div>
                 );
             })}
@@ -253,60 +253,73 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
       </div>
 
       {/* Section 2: Action Buttons & Library */}
-      <div className="space-y-4 pt-6 mt-6 border-t border-gray-200 dark:border-gray-700">
-        <h3 className="font-semibold text-gray-800 dark:text-gray-200">Hareket Ekle</h3>
+      <div className="space-y-4 pt-6 mt-6 bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-100 dark:border-gray-700">
+        <h3 className="font-semibold text-lg text-gray-800 dark:text-gray-100 mb-4">Yeni Hareket Ekle</h3>
         <div className="grid grid-cols-2 gap-3">
             <div className="relative">
-                <button onClick={() => setRoutinePickerOpen(prev => !prev)} className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-green-500 text-white rounded-lg text-sm hover:bg-green-600">
-                    <BookCopy size={16} /> Rutinden Ekle
+                <button onClick={() => setRoutinePickerOpen(prev => !prev)} className="w-full flex items-center justify-center gap-2 px-3 py-3 bg-green-600 text-white rounded-xl text-base font-semibold hover:bg-green-700 transition-all duration-200 ease-in-out active:scale-95 shadow-md">
+                    <BookCopy size={20} /> Rutinden Ekle
                 </button>
                 {isRoutinePickerOpen && (
-                    <div className="absolute left-0 mt-2 w-full bg-white dark:bg-gray-800 rounded-lg shadow-xl z-20 border dark:border-gray-700">
+                    <div className="absolute left-0 mt-2 w-full bg-white dark:bg-gray-800 rounded-xl shadow-xl z-20 border border-gray-200 dark:border-gray-700 overflow-hidden">
                     {routines.length > 0 ? routines.map(routine => (
-                        <a key={routine.id} onClick={() => handleSelectRoutine(routine)} className="block px-4 py-3 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">
+                        <a key={routine.id} onClick={() => handleSelectRoutine(routine)} className="block px-4 py-3 text-base text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors">
                         {routine.name}
                         </a>
-                    )) : <span className="block px-4 py-3 text-sm text-gray-500">Kayıtlı rutin yok.</span>}
+                    )) : <span className="block px-4 py-3 text-base text-gray-500 dark:text-gray-400">Kayıtlı rutin yok.</span>}
                     </div>
                 )}
             </div>
-            <button onClick={addManualExercise} className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-gray-600"> <Plus size={16} /> Manuel Ekle </button>
+            <button onClick={addManualExercise} className="w-full flex items-center justify-center gap-2 px-3 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl text-base font-semibold hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200 ease-in-out active:scale-95 shadow-md"> <Plus size={20} /> Manuel Ekle </button>
+        </div>
+        
+        <div className="flex items-center text-center my-4">
+            <div className="flex-grow border-t border-gray-200 dark:border-gray-700"></div>
+            <span className="flex-shrink mx-4 text-sm text-gray-500 dark:text-gray-400 uppercase">Veya Kütüphaneden Seç</span>
+            <div className="flex-grow border-t border-gray-200 dark:border-gray-700"></div>
         </div>
 
         <div className="relative">
           <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" />
-          <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Hareket adı ara..." className="w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200" />
+          <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Hareket adı ara..." className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 text-base" />
         </div>
         
         {loading ? (
             <div className="flex items-center justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div><span className="ml-3 text-gray-600 dark:text-gray-400">Yükleniyor...</span></div>
         ) : (
-            <div className="space-y-3 max-h-[50vh] overflow-y-auto p-1">
-            {filteredLibraryExercises.map(exercise => (
-              <div key={exercise.id} className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-shadow">
+            <div className="space-y-3 max-h-[50vh] overflow-y-auto p-1 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
+            {filteredLibraryExercises.length > 0 ? filteredLibraryExercises.map(exercise => (
+              <div key={exercise.id} className="bg-gray-50 dark:bg-gray-700 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-600 hover:shadow-md transition-shadow transform hover:scale-[1.01] active:scale-[0.99]">
                 <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700 flex-shrink-0 cursor-pointer" // cursor-pointer eklendi
-                       onClick={() => handleImageClick(getImageUrl(exercise.gifUrl))}> {/* onClick eklendi */}
+                  <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-600 flex-shrink-0 cursor-pointer shadow-sm"
+                       onClick={() => handleImageClick(getImageUrl(exercise.gifUrl))}>
                     <img src={getImageUrl(exercise.gifUrl)} alt={exercise.name} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.src = 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop'; }}/>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-gray-800 dark:text-gray-200 truncate">{exercise.name}</h3>
-                    <div className="flex items-center gap-2 mt-1"><span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 px-2 py-1 rounded-full">{getBodyPartName(exercise.bodyPart)}</span><span className="text-xs bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 px-2 py-1 rounded-full">{exercise.equipment}</span></div>
+                    <h3 className="font-semibold text-base text-gray-800 dark:text-gray-200 truncate">{exercise.name}</h3>
+                    <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 px-3 py-1 rounded-full font-medium">{getBodyPartName(exercise.bodyPart)}</span>
+                        <span className="text-xs bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 px-3 py-1 rounded-full font-medium">{exercise.equipment}</span>
+                    </div>
                   </div>
-                  <button onClick={() => handleAddExerciseToWorkout(exercise)} className="p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex-shrink-0"><Plus size={20} /></button>
+                  <button onClick={() => handleAddExerciseToWorkout(exercise)} className="p-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all duration-200 ease-in-out active:scale-95 shadow-md flex-shrink-0">
+                    <Plus size={20} />
+                  </button>
                 </div>
               </div>
-            ))}
+            )) : (
+              <p className="text-md text-center text-gray-500 dark:text-gray-400 py-4">Aradığınız hareket bulunamadı veya zaten antrenman listenizde mevcut.</p>
+            )}
             </div>
         )}
       </div>
 
       {/* Save/Cancel Buttons */}
       <div className="flex gap-3 mt-8">
-          <button onClick={onCancel} className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+          <button onClick={onCancel} className="flex-1 py-3 px-6 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 ease-in-out active:scale-95 shadow-md text-base">
               İptal
           </button>
-          <button onClick={handleSave} className="flex-1 py-3 px-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
+          <button onClick={handleSave} className="flex-1 py-3 px-6 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all duration-200 ease-in-out active:scale-95 flex items-center justify-center gap-2 shadow-md text-base">
               <Save size={20} /> Antrenmanı Kaydet
           </button>
       </div>
@@ -314,17 +327,17 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
       {/* Yeni: Büyük görsel modalı */}
       {showLargeImage && currentLargeImageUrl && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4" onClick={closeLargeImage}>
-          <div className="relative bg-white dark:bg-gray-800 rounded-lg p-2 max-w-full max-h-full overflow-hidden" onClick={(e) => e.stopPropagation()}>
+          <div className="relative bg-white dark:bg-gray-800 rounded-2xl p-3 max-w-full max-h-full overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <button
               onClick={closeLargeImage}
-              className="absolute top-2 right-2 text-white bg-gray-800 dark:bg-gray-700 rounded-full p-2 hover:bg-gray-900 dark:hover:bg-gray-600 transition-colors"
+              className="absolute top-3 right-3 text-white bg-gray-800 dark:bg-gray-700 rounded-full p-2 hover:bg-gray-900 dark:hover:bg-gray-600 transition-colors z-10"
             >
               <X size={24} />
             </button>
             <img
               src={currentLargeImageUrl}
               alt="Büyük Egzersiz Görseli"
-              className="max-w-[80vw] max-h-[80vh] object-contain mx-auto"
+              className="max-w-[80vw] max-h-[80vh] object-contain mx-auto rounded-xl"
               onError={(e) => { e.currentTarget.src = 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=800'; }}
             />
           </div>
