@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, parseISO } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, parseISO, startOfWeek, endOfWeek } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, Dumbbell } from 'lucide-react';
 import { Workout } from '../App';
@@ -14,7 +14,13 @@ const WorkoutCalendar: React.FC<WorkoutCalendarProps> = ({ workouts, onDateSelec
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
-  const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
+
+  // DÜZELTME BAŞLANGICI: Haftanın başlangıcını Pazartesi olarak ayarlayarak takvim görünümünü düzeltme
+  const startOfCalendar = startOfWeek(monthStart, { locale: tr, weekStartsOn: 1 }); // Haftayı Pazartesi başlat
+  const endOfCalendar = endOfWeek(monthEnd, { locale: tr, weekStartsOn: 1 });     // Haftayı Pazar bitir
+
+  const monthDays = eachDayOfInterval({ start: startOfCalendar, end: endOfCalendar });
+  // DÜZELTME SONU
 
   const workoutDates = new Set(workouts.map(w => w.date));
 
