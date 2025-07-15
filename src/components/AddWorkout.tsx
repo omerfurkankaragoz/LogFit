@@ -1,12 +1,12 @@
+// src/components/AddWorkout.tsx
 import React, { useState, useEffect, useMemo } from 'react';
-import { Plus, Trash2, Save, BookCopy, Search, Filter } from 'lucide-react';
+import { Plus, Trash2, Save, BookCopy, Search, Filter, X } from 'lucide-react'; // X ikonu eklendi
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { Exercise, Workout } from '../App';
 import { Routine } from './RoutinesList';
 import { getAllExercises, getBodyParts, Exercise as LibraryExercise } from '../services/exerciseApi';
 
-// SUPABASE PROJE URL'NİZİ VE BUCKET ADINI GİRİN
 const SUPABASE_PROJECT_URL = 'https://ekrhekungvoisfughwuz.supabase.co'; 
 const BUCKET_NAME = 'images';
 
@@ -30,6 +30,10 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
   const [selectedBodyPart, setSelectedBodyPart] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
   const [bodyParts, setBodyParts] = useState<string[]>([]);
+
+  // Yeni state'ler: Büyük görsel modalı için
+  const [showLargeImage, setShowLargeImage] = useState(false);
+  const [currentLargeImageUrl, setCurrentLargeImageUrl] = useState<string | null>(null);
 
   // Fetch all library exercises and body parts on mount
   useEffect(() => {
@@ -182,6 +186,17 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
     return names[bodyPart.toLowerCase()] || bodyPart.charAt(0).toUpperCase() + bodyPart.slice(1);
   };
 
+  // Yeni: Büyük görseli gösterme fonksiyonları
+  const handleImageClick = (imageUrl: string) => {
+    setCurrentLargeImageUrl(imageUrl);
+    setShowLargeImage(true);
+  };
+
+  const closeLargeImage = () => {
+    setShowLargeImage(false);
+    setCurrentLargeImageUrl(null);
+  };
+
   return (
     <div className="p-4 space-y-6">
       <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
@@ -239,7 +254,7 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
 
       {/* Section 2: Action Buttons & Library */}
       <div className="space-y-4 pt-6 mt-6 border-t border-gray-200 dark:border-gray-700">
-        <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Hareket Ekle</h3>
+        <h3 className="font-semibold text-gray-800 dark:text-gray-200">Hareket Ekle</h3>
         <div className="grid grid-cols-2 gap-3">
             <div className="relative">
                 <button onClick={() => setRoutinePickerOpen(prev => !prev)} className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-green-500 text-white rounded-lg text-sm hover:bg-green-600">
@@ -270,7 +285,8 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
             {filteredLibraryExercises.map(exercise => (
               <div key={exercise.id} className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-shadow">
                 <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700 flex-shrink-0">
+                  <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700 flex-shrink-0 cursor-pointer" // cursor-pointer eklendi
+                       onClick={() => handleImageClick(getImageUrl(exercise.gifUrl))}> {/* onClick eklendi */}
                     <img src={getImageUrl(exercise.gifUrl)} alt={exercise.name} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.src = 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop'; }}/>
                   </div>
                   <div className="flex-1 min-w-0">
@@ -294,6 +310,26 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
               <Save size={20} /> Antrenmanı Kaydet
           </button>
       </div>
+
+      {/* Yeni: Büyük görsel modalı */}
+      {showLargeImage && currentLargeImageUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4" onClick={closeLargeImage}>
+          <div className="relative bg-white dark:bg-gray-800 rounded-lg p-2 max-w-full max-h-full overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={closeLargeImage}
+              className="absolute top-2 right-2 text-white bg-gray-800 dark:bg-gray-700 rounded-full p-2 hover:bg-gray-900 dark:hover:bg-gray-600 transition-colors"
+            >
+              <X size={24} />
+            </button>
+            <img
+              src={currentLargeImageUrl}
+              alt="Büyük Egzersiz Görseli"
+              className="max-w-[80vw] max-h-[80vh] object-contain mx-auto"
+              onError={(e) => { e.currentTarget.src = 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=800'; }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
