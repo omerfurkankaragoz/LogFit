@@ -246,7 +246,7 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
             İptal
           </button>
           <button onClick={handleSave} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 py-2 px-6 text-base font-medium text-white shadow-md transition-all duration-200 ease-in-out hover:bg-blue-700 active:scale-95">
-            <Save size={18} /> Antrenmanı Kaydet
+            <Save size={18} /> Kaydet
           </button>
         </div>
       </div>
