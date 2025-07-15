@@ -1,3 +1,4 @@
+// src/components/Profile.tsx
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../services/supabaseClient';
 import { Session } from '@supabase/supabase-js';
@@ -28,16 +29,28 @@ const Profile: React.FC<ProfileProps> = ({ session }) => {
           .eq('id', user.id)
           .single();
 
-        if (error && status !== 406) {
+        if (error && status !== 406) { // 406 No Rows Found ise hata fırlatma
           throw error;
         }
 
         if (data) {
-          setFullName(data.full_name || user.email || '');
+          setFullName(data.full_name || user.email || ''); // Anonim kullanıcı için email null olacağından boş dönecek
           setAvatarUrl(data.avatar_url);
           setAge(data.age || '');
           setHeight(data.height || '');
           setWeight(data.weight || '');
+
+          // Eğer tam ad veya herhangi bir metrik boşsa düzenleme moduna gir
+          // `data.age === null` gibi kontrol, 0 değerini de geçerli sayar
+          if (!data.full_name || data.age === null || data.height === null || data.weight === null) {
+            setEditMode(true);
+          }
+        } else if (status === 406) { // Yeni kullanıcı, profil kaydı yok
+            setFullName(''); // Tam adı boş bırak, kullanıcının girmesi için
+            setAge('');
+            setHeight('');
+            setWeight('');
+            setEditMode(true); // Direkt düzenleme modunda aç
         }
       } catch (error: any) {
         alert(error.message);
@@ -56,6 +69,7 @@ const Profile: React.FC<ProfileProps> = ({ session }) => {
 
       const updates = {
         id: user.id,
+        full_name: fullName, // Tam adı da güncellemelerde gönderiyoruz
         age: age === '' ? null : age,
         height: height === '' ? null : height,
         weight: weight === '' ? null : weight,
@@ -100,14 +114,30 @@ const Profile: React.FC<ProfileProps> = ({ session }) => {
             alt="Avatar"
             className="w-24 h-24 rounded-full shadow-lg"
           />
-          <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">{fullName}</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">{session.user.email}</p>
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">{fullName || 'Profilinizi Tamamlayın'}</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{session.user.email || 'Misafir Kullanıcı'}</p> {/* Anonim ise 'Misafir Kullanıcı' göster */}
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm space-y-4">
           <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-2">Kişisel Bilgiler</h3>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Tam Adınız Alanı Eklendi */}
+            <div>
+              <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Tam Adınız</label>
+              {editMode ? (
+                <input 
+                  type="text" 
+                  value={fullName || ''} // Null ise boş string göster
+                  onChange={(e) => setFullName(e.target.value)} 
+                  placeholder="Adınız Soyadınız"
+                  className="mt-1 w-full p-2 border rounded-md bg-gray-50 text-gray-900 dark:bg-gray-700 dark:text-white dark:border-gray-600"
+                />
+              ) : (
+                <p className="text-lg font-medium text-gray-800 dark:text-gray-200">{fullName || '-'}</p>
+              )}
+            </div>
+            {/* Yaş */}
             <div>
               <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Yaş</label>
               {editMode ? (
@@ -122,6 +152,7 @@ const Profile: React.FC<ProfileProps> = ({ session }) => {
                 <p className="text-lg font-medium text-gray-800 dark:text-gray-200">{age || '-'}</p>
               )}
             </div>
+            {/* Boy */}
             <div>
               <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Boy (cm)</label>
               {editMode ? (
@@ -136,6 +167,7 @@ const Profile: React.FC<ProfileProps> = ({ session }) => {
                 <p className="text-lg font-medium text-gray-800 dark:text-gray-200">{height || '-'}</p>
               )}
             </div>
+            {/* Kilo */}
             <div>
               <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Kilo (kg)</label>
               {editMode ? (
