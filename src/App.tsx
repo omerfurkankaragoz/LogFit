@@ -1,3 +1,5 @@
+// src/App.tsx
+
 import React, { useState, useEffect } from 'react';
 import { Calendar, Dumbbell, BarChart3, ArrowLeft, BookOpen, LogOut, User } from 'lucide-react';
 import WorkoutCalendar from './components/WorkoutCalendar';
@@ -8,14 +10,14 @@ import RoutinesList, { Routine } from './components/RoutinesList';
 import CreateRoutine from './components/CreateRoutine';
 import ExerciseLibrary from './components/ExerciseLibrary';
 import Auth from './components/Auth';
-import Profile from './components/Profile'; // Profile bileşenini import ediyoruz
+import Profile from './components/Profile';
 import { supabase } from './services/supabaseClient';
 import { Session } from '@supabase/supabase-js';
 
 // Arayüzler (Interfaces)
 export interface Exercise {
   id: string;
-  name:string;
+  name: string;
   sets: { reps: number; weight: number }[];
 }
 export interface Workout {
@@ -25,7 +27,7 @@ export interface Workout {
   exercises: Exercise[];
 }
 
-// View tipine 'profile' eklendi
+// View Tipi
 type View = 'calendar' | 'add' | 'details' | 'progress' | 'routines' | 'create_routine' | 'library' | 'profile';
 
 function App() {
@@ -89,7 +91,7 @@ function App() {
     setCurrentView(view);
   };
 
-  // --- Veri Kaydetme / Güncelleme / Silme (user_id eklendi) ---
+  // --- Veri Kaydetme / Güncelleme / Silme ---
 
   const handleSaveWorkout = async (workoutData: Omit<Workout, 'id' | 'created_at' | 'user_id'>) => {
     if (!session) return;
@@ -97,7 +99,7 @@ function App() {
     const workoutPayload = { ...workoutData, user_id: session.user.id };
 
     if (workoutToUpdate && workoutToUpdate.id !== 'new') {
-      await supabase.from('workouts').update({ exercises: workoutPayload.exercises }).eq('id', workoutToUpdate.id);
+      await supabase.from('workouts').update({ exercises: workoutPayload.exercises, date: workoutPayload.date }).eq('id', workoutToUpdate.id);
     } else {
       await supabase.from('workouts').insert([workoutPayload]);
     }
@@ -136,13 +138,50 @@ function App() {
     handleSetView('create_routine');
     setEditingRoutine(routine);
   };
-  
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setWorkouts([]);
     setRoutines([]);
     setCurrentView('calendar');
   };
+  
+  const handleAddExerciseFromLibrary = (exerciseToAdd: { id: string; name: string; }) => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    
+    const workoutForToday = workouts.find(w => w.date === todayStr);
+    const workoutToEdit = editingWorkout && editingWorkout.date === todayStr ? editingWorkout : workoutForToday;
+
+    const newExercise: Exercise = {
+        id: `${exerciseToAdd.id}-${Date.now()}`,
+        name: exerciseToAdd.name,
+        sets: [{ reps: 0, weight: 0 }]
+    };
+
+    if (workoutToEdit) {
+        const exerciseExists = workoutToEdit.exercises.some(ex => ex.name.toLowerCase() === newExercise.name.toLowerCase());
+        
+        if (exerciseExists) {
+             alert(`"${newExercise.name}" zaten bugünkü antrenmanınızda mevcut.`);
+        } else {
+            // DEĞİŞİKLİK BURADA: Yeni egzersizi listenin başına ekliyoruz.
+            const updatedExercises = [newExercise, ...workoutToEdit.exercises];
+            setEditingWorkout({ ...workoutToEdit, exercises: updatedExercises });
+        }
+    } else {
+        const newWorkout: Workout = {
+            id: 'new',
+            user_id: session?.user.id || '',
+            date: todayStr,
+            exercises: [newExercise],
+        };
+        setEditingWorkout(newWorkout);
+    }
+    
+    setSelectedDate(todayStr);
+    handleSetView('add');
+  };
+
 
   // --- Sayfa Yönlendirme ve Render ---
 
@@ -221,6 +260,7 @@ function App() {
             setSelectedDate(date);
             const workoutForDate = workouts.find(w => w.date === date);
             if (workoutForDate) {
+              setEditingWorkout(workoutForDate);
               handleSetView('details');
             } else {
               setEditingWorkout(null);
@@ -245,30 +285,13 @@ function App() {
           workouts={workouts}
           onEdit={() => { setEditingWorkout(selectedWorkout); handleSetView('add'); }}
           onDelete={() => handleDeleteWorkout(selectedWorkout.id)}
-          onUpdate={(id, data) => handleSaveWorkout({ id, ...data })}
         /> : null;
       case 'progress':
         return <ProgressCharts workouts={workouts} />;
       
       case 'library':
         return <ExerciseLibrary 
-            onExerciseSelect={(exercise) => {
-                const today = new Date().toISOString().split('T')[0];
-                const newWorkoutFromLibrary: Workout = {
-                    id: 'new',
-                    date: today,
-                    user_id: session?.user.id || '',
-                    exercises: [{
-                        id: Date.now().toString(),
-                        name: exercise.name,
-                        sets: [{ reps: 0, weight: 0 }]
-                    }]
-                };
-                setEditingWorkout(newWorkoutFromLibrary);
-                setSelectedDate(today);
-                handleSetView('add');
-            }}
-            onBack={() => setCurrentView('calendar')} 
+            onExerciseSelect={handleAddExerciseFromLibrary}
         />;
       default: return null;
     }
@@ -280,7 +303,7 @@ function App() {
       { view: 'routines', icon: Dumbbell, label: 'Rutinler' },
       { view: 'library', icon: BookOpen, label: 'Kütüphane' },
       { view: 'progress', icon: BarChart3, label: 'İstatistik' },
-      { view: 'profile', icon: User, label: 'Profil' }, // Profil butonu eklendi
+      { view: 'profile', icon: User, label: 'Profil' },
     ];
 
     return (
