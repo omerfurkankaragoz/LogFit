@@ -42,7 +42,6 @@ function App() {
   const [editingRoutine, setEditingRoutine] = useState<Routine | null>(null);
   const [previousView, setPreviousView] = useState<View>('calendar');
 
-  // ... (Diğer tüm fonksiyonlarınız ve useEffect'leriniz aynı kalacak)
   // Kullanıcı oturumunu dinle
   useEffect(() => {
     setLoading(true);
@@ -317,7 +316,7 @@ function App() {
     ];
 
     return (
-      <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-2 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] shadow-lg">
+      <nav className="flex-shrink-0 fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-2 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] shadow-lg">
         <div className="max-w-md mx-auto flex justify-around">
             {navItems.map(item => (
               <button key={item.view} onClick={() => setCurrentView(item.view as View)} className={`flex flex-col items-center gap-1 w-1/5 py-1 rounded-md ${currentView === item.view ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/50 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300'}`}>
@@ -339,8 +338,7 @@ function App() {
 
       {/* Bu main alanı, kalan boşluğu doldurur (flex-1) ve içerik taştığında
         sadece kendisi kaydırılır (overflow-y-auto).
-        En önemlisi, navigasyon çubuğunun arkasında içeriğin kaybolmaması için
-        altına boşluk (padding) eklenmiştir (pb-24).
+        Navigasyon çubuğunun içeriği gizlememesi için altına boşluk eklenmiştir (pb-24).
       */}
       <main className="flex-1 overflow-y-auto pb-24">
         {renderContent()}
