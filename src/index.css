@@ -1,28 +1,3 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@layer base {
-  html {
-    /* Güvenli alanların arka plan rengi (nav bar ile aynı olmalı) */
-    @apply bg-white dark:bg-gray-800;
-  }
-
-  body {
-    /* Gereksiz kaydırmaları ve seçimleri engeller */
-    overscroll-behavior-y: contain;
-    user-select: none;
-    -webkit-user-select: none;
-  }
-
-  /* YENİ VE EN ÖNEMLİ KISIM */
-  #root {
-    /* #root elementini PWA modunda bile tüm ekranı kaplamaya zorlar */
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    overflow: hidden; /* Bu elementin kendisinin kaymasını engeller */
-  }
-}

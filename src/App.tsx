@@ -42,7 +42,6 @@ function App() {
   const [editingRoutine, setEditingRoutine] = useState<Routine | null>(null);
   const [previousView, setPreviousView] = useState<View>('calendar');
 
-  // ... (Diğer tüm fonksiyonlarınız ve useEffect'leriniz aynı kalacak)
   // Kullanıcı oturumunu dinle
   useEffect(() => {
     setLoading(true);
@@ -195,7 +194,7 @@ function App() {
   // --- Sayfa Yönlendirme ve Render ---
 
   if (loading) {
-    return <div className="h-full w-full flex justify-center items-center"><div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div></div>;
+    return <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex justify-center items-center"><div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div></div>;
   }
 
   if (!session) {
@@ -217,7 +216,7 @@ function App() {
     const isSubPage = !['calendar', 'routines', 'progress', 'library', 'profile'].includes(currentView);
 
     return (
-      <header className="flex-shrink-0 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-4 shadow-lg">
+      <header className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-4 shadow-lg">
         <div className="max-w-md mx-auto flex items-center justify-between">
           <div className="w-10">
             {isSubPage && (
@@ -331,23 +330,12 @@ function App() {
   };
 
   return (
-    // 1. DIŞ KATMAN: Tüm ekranı kaplayan arka plan.
-    <div className="h-full w-full bg-gray-50 dark:bg-gray-900">
-      
-      {/* 2. İÇ KATMAN: Ortalanmış ve maksimum genişliği olan içerik konteyneri. */}
-      <div className="relative mx-auto flex h-full w-full max-w-md flex-col">
-        
-        {/* Header bu iç katmanın en üstünde yer alır */}
-        {renderHeader()}
-
-        {/* main alanı kalan boşluğu doldurur ve kaydırılır */}
-        <main className="flex-1 overflow-y-auto pb-24">
-          {renderContent()}
-        </main>
-
-        {/* Navigasyon barı, en dış katmana göre sabitlenir */}
-        {renderBottomNav()}
-      </div>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      {renderHeader()}
+      <main className="max-w-md mx-auto pb-24">
+        {renderContent()}
+      </main>
+      {renderBottomNav()}
     </div>
   );
 }
