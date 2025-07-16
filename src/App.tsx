@@ -42,6 +42,7 @@ function App() {
   const [editingRoutine, setEditingRoutine] = useState<Routine | null>(null);
   const [previousView, setPreviousView] = useState<View>('calendar');
 
+  // ... (Diğer tüm fonksiyonlarınız ve useEffect'leriniz aynı kalacak)
   // Kullanıcı oturumunu dinle
   useEffect(() => {
     setLoading(true);
@@ -216,7 +217,7 @@ function App() {
     const isSubPage = !['calendar', 'routines', 'progress', 'library', 'profile'].includes(currentView);
 
     return (
-      <header className="flex-shrink-0 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-4 shadow-lg">
+      <header className="flex-shrink-0 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-4 shadow-lg z-20">
         <div className="max-w-md mx-auto flex items-center justify-between">
           <div className="w-10">
             {isSubPage && (
@@ -316,7 +317,7 @@ function App() {
     ];
 
     return (
-      <nav className="flex-shrink-0 fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-2 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] shadow-lg">
+      <nav className="flex-shrink-0 fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-2 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] shadow-lg z-20">
         <div className="max-w-md mx-auto flex justify-around">
             {navItems.map(item => (
               <button key={item.view} onClick={() => setCurrentView(item.view as View)} className={`flex flex-col items-center gap-1 w-1/5 py-1 rounded-md ${currentView === item.view ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/50 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300'}`}>
@@ -330,12 +331,18 @@ function App() {
   };
 
   return (
-    // Arka plan rengini BURAYA GERİ EKLEDİK.
-    <div className="h-full w-full flex flex-col bg-gray-50 dark:bg-gray-900">
+    <div className="h-full w-full flex flex-col relative">
       {renderHeader()}
-      <main className="flex-1 overflow-y-auto w-full max-w-md mx-auto pb-24">
-        {renderContent()}
-      </main>
+      {/* YENİ YAPI:
+        Bu div, başlık ve alt navigasyon arasında kalan tüm alanı doldurur.
+        Kaydırma işlemi bu div içinde gerçekleşir.
+        İstediğimiz arka plan rengi buradadır.
+      */}
+      <div className="flex-1 overflow-y-auto w-full bg-gray-50 dark:bg-gray-900">
+        <main className="w-full max-w-md mx-auto pb-24">
+          {renderContent()}
+        </main>
+      </div>
       {renderBottomNav()}
     </div>
   );

@@ -5,10 +5,10 @@
 @layer base {
   html {
     /*
-      ARKA PLAN RENGİNİ BURAYA TAŞIDIK.
-      Bu, iPhone'daki alt çubuk gibi "güvenli alanların" da doğru renkte olmasını sağlar.
+      Bu, iPhone'un altındaki çentik gibi güvenli alanların
+      doğru arka plan rengine sahip olmasını sağlar.
     */
-    @apply bg-gray-50 dark:bg-gray-900;
+    @apply bg-white dark:bg-gray-800;
   }
 
   html,
@@ -18,10 +18,9 @@
   }
 
   body {
-    /* iOS ve Android'de kaydırma sonunda oluşan sıçrama/parlama efektini engeller */
+    /* Sayfanın "sıçrama" efektini ve metin seçimini engeller */
     overscroll-behavior-y: contain;
-    /* Kullanıcının metin seçmesini engeller, daha uygulama benzeri bir his verir */
     user-select: none;
-    -webkit-user-select: none; /* Safari için */
+    -webkit-user-select: none;
   }
 }
