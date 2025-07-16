@@ -26,11 +26,9 @@ const CreateRoutine: React.FC<CreateRoutineProps> = ({ existingRoutine, onSaveRo
   const [showFilters, setShowFilters] = useState(false);
   const [bodyParts, setBodyParts] = useState<string[]>([]);
 
-  // Yeni state'ler: Büyük görsel modalı için
   const [showLargeImage, setShowLargeImage] = useState(false);
   const [currentLargeImageUrl, setCurrentLargeImageUrl] = useState<string | null>(null);
 
-  // Fetch initial library data
   useEffect(() => {
     const fetchInitialData = async () => {
       setLoading(true);
@@ -45,7 +43,6 @@ const CreateRoutine: React.FC<CreateRoutineProps> = ({ existingRoutine, onSaveRo
     fetchInitialData();
   }, []);
 
-  // Populate routine data when editing
   useEffect(() => {
     if (existingRoutine) {
       setRoutineName(existingRoutine.name);
@@ -53,7 +50,6 @@ const CreateRoutine: React.FC<CreateRoutineProps> = ({ existingRoutine, onSaveRo
     }
   }, [existingRoutine]);
 
-  // Memoized filtering for the library
   const filteredLibraryExercises = useMemo(() => {
     const selectedExerciseNames = new Set(selectedExercises.map(ex => ex.name.toLowerCase()));
     
@@ -110,10 +106,13 @@ const CreateRoutine: React.FC<CreateRoutineProps> = ({ existingRoutine, onSaveRo
     onSaveRoutine(existingRoutine ? existingRoutine.id : null, routineName, selectedExercises);
   };
 
-  // Helper functions for UI
+  // GÜNCELLENDİ: Bu fonksiyon artık "0.jpg"yi "1.jpg" ile değiştiriyor.
   const getImageUrl = (gifPath: string) => {
     if (!gifPath) return 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop';
-    return `${SUPABASE_PROJECT_URL}/storage/v1/object/public/${BUCKET_NAME}/exercises/${gifPath}`;
+    
+    const imagePath = gifPath.replace('0.jpg', '1.jpg');
+
+    return `${SUPABASE_PROJECT_URL}/storage/v1/object/public/${BUCKET_NAME}/exercises/${imagePath}`;
   };
 
   const getBodyPartName = (bodyPart: string) => {
@@ -122,7 +121,6 @@ const CreateRoutine: React.FC<CreateRoutineProps> = ({ existingRoutine, onSaveRo
     return names[bodyPart.toLowerCase()] || bodyPart.charAt(0).toUpperCase() + bodyPart.slice(1);
   };
 
-  // Yeni: Büyük görseli gösterme fonksiyonları
   const handleImageClick = (imageUrl: string) => {
     setCurrentLargeImageUrl(imageUrl);
     setShowLargeImage(true);
@@ -221,7 +219,7 @@ const CreateRoutine: React.FC<CreateRoutineProps> = ({ existingRoutine, onSaveRo
         <button onClick={handleSave} className="flex-1 py-3 px-6 bg-blue-600 text-white rounded-xl flex items-center justify-center gap-2 hover:bg-blue-700 transition-all duration-200 ease-in-out active:scale-95 shadow-md text-base"><Save size={20} /> Kaydet</button>
       </div>
 
-      {/* Yeni: Büyük görsel modalı */}
+      {/* Büyük görsel modalı */}
       {showLargeImage && currentLargeImageUrl && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4" onClick={closeLargeImage}>
           <div className="relative bg-white dark:bg-gray-800 rounded-2xl p-3 max-w-full max-h-full overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>

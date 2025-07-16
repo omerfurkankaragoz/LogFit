@@ -127,9 +127,14 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
     onSave({ date, exercises: exercisesToSave });
   };
 
-  const getImageUrl = (gifPath: string) => {
+  // GÜNCELLENDİ: Bu fonksiyon artık "0.jpg"yi "1.jpg" ile değiştiriyor.
+  const getImageUrl = (gifPath: string | undefined) => {
     if (!gifPath) return 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop';
-    return `${SUPABASE_PROJECT_URL}/storage/v1/object/public/images/exercises/${gifPath}`;
+    
+    // 0.jpg'yi 1.jpg ile değiştir
+    const imagePath = gifPath.replace('0.jpg', '1.jpg');
+    
+    return `${SUPABASE_PROJECT_URL}/storage/v1/object/public/images/exercises/${imagePath}`;
   };
 
   const getBodyPartName = (bodyPart: string) => {
@@ -209,14 +214,26 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
       <div className="space-y-6">
         {workoutExercises.length > 0 && <h3 className="font-semibold text-lg text-gray-800 dark:text-gray-100 mt-4">Antrenman Listesi</h3>}
         {workoutExercises.map((exercise) => {
+          const libraryExercise = allLibraryExercises.find(libEx => libEx.name.toLowerCase() === exercise.name.toLowerCase());
+          const imageUrl = getImageUrl(libraryExercise?.gifUrl);
+
           const previousExercise = getPreviousExerciseData(exercise.name);
           const previousMaxWeight = previousExercise && previousExercise.sets.length > 0 ? Math.max(...previousExercise.sets.map(s => s.weight)) : null;
           return (
             <div key={exercise.id} className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-lg border border-gray-100 dark:border-gray-700">
-              <div className="flex items-center gap-2 mb-4">
-                <input type="text" value={exercise.name} onChange={(e) => updateExerciseName(exercise.id, e.target.value)} placeholder="Hareket adı" className="flex-1 p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-base" />
-                <button onClick={() => removeWorkoutExercise(exercise.id)} className="p-3 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-lg transition-colors active:scale-95"> <Trash2 size={20} /> </button>
+              <div className="flex items-center gap-3 mb-4">
+                <div 
+                  className="w-11 h-11 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700 flex-shrink-0 cursor-pointer shadow-sm"
+                  onClick={() => handleImageClick(imageUrl)}
+                >
+                  <img src={imageUrl} alt={exercise.name} className="w-full h-full object-cover" />
+                </div>
+                <div className="flex-1 flex items-center gap-2">
+                    <input type="text" value={exercise.name} onChange={(e) => updateExerciseName(exercise.id, e.target.value)} placeholder="Hareket adı" className="flex-1 p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-base" />
+                    <button onClick={() => removeWorkoutExercise(exercise.id)} className="p-3 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-lg transition-colors active:scale-95"> <Trash2 size={20} /> </button>
+                </div>
               </div>
+
               <div className="space-y-2">
                 <div className="grid grid-cols-5 gap-2 text-sm font-medium text-gray-600 dark:text-gray-400 px-1">
                   <span>Set</span><span>Önceki</span><span>Kg</span><span>Tekrar</span><span></span>
@@ -239,7 +256,7 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
         })}
       </div>
 
- {/* Kaydet/İptal Butonları */}
+     {/* Kaydet/İptal Butonları */}
       <div className="fixed bottom-24 left-0 right-0 z-10 border-t border-gray-200 bg-white/90 px-4 py-2 backdrop-blur-sm dark:border-gray-700 dark:bg-gray-800/90">
         <div className="mx-auto flex max-w-md gap-3">
           <button onClick={onCancel} className="flex-1 rounded-xl border border-gray-300 py-2 px-6 text-base font-medium text-gray-800 shadow-md transition-all duration-200 ease-in-out hover:bg-gray-100 active:scale-95 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">

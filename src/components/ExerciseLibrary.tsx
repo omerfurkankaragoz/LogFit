@@ -8,7 +8,7 @@ const BUCKET_NAME = 'images';
 
 interface ExerciseLibraryProps {
   onExerciseSelect: (exercise: Exercise) => void;
-  onBack: () => void; // Bu prop kaldırıldı, çünkü App.tsx'deki yönlendirme header tarafından yapılıyor.
+  onBack: () => void;
 }
 
 const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({ onExerciseSelect }) => {
@@ -60,9 +60,13 @@ const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({ onExerciseSelect }) =
     }
   };
   
+  // GÜNCELLENDİ: Bu fonksiyon artık "0.jpg"yi "1.jpg" ile değiştiriyor.
   const getImageUrl = (gifPath: string) => {
     if (!gifPath) return 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop';
-    return `${SUPABASE_PROJECT_URL}/storage/v1/object/public/${BUCKET_NAME}/exercises/${gifPath}`;
+    
+    const imagePath = gifPath.replace('0.jpg', '1.jpg');
+    
+    return `${SUPABASE_PROJECT_URL}/storage/v1/object/public/${BUCKET_NAME}/exercises/${imagePath}`;
   };
 
   const getBodyPartEmoji = (bodyPart: string) => {
