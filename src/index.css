@@ -3,6 +3,14 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    /*
+      ARKA PLAN RENGİNİ BURAYA TAŞIDIK.
+      Bu, iPhone'daki alt çubuk gibi "güvenli alanların" da doğru renkte olmasını sağlar.
+    */
+    @apply bg-gray-50 dark:bg-gray-900;
+  }
+
   html,
   body,
   #root {

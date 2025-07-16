@@ -194,7 +194,7 @@ function App() {
   // --- Sayfa Yönlendirme ve Render ---
 
   if (loading) {
-    return <div className="h-full w-full bg-gray-50 dark:bg-gray-900 flex justify-center items-center"><div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div></div>;
+    return <div className="h-full w-full flex justify-center items-center"><div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div></div>;
   }
 
   if (!session) {
@@ -330,6 +330,7 @@ function App() {
   };
 
   return (
+    // Arka plan rengini BURAYA GERİ EKLEDİK.
     <div className="h-full w-full flex flex-col bg-gray-50 dark:bg-gray-900">
       {renderHeader()}
       <main className="flex-1 overflow-y-auto w-full max-w-md mx-auto pb-24">
