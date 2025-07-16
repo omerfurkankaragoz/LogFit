@@ -216,7 +216,7 @@ function App() {
     const isSubPage = !['calendar', 'routines', 'progress', 'library', 'profile'].includes(currentView);
 
     return (
-      <header className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-4 shadow-lg">
+      <header className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-4 shadow-lg sticky top-0 z-30">
         <div className="max-w-md mx-auto flex items-center justify-between">
           <div className="w-10">
             {isSubPage && (
