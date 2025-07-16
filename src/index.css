@@ -5,8 +5,8 @@
 @layer base {
   html {
     /*
-      Bu, iPhone'un altındaki çentik gibi güvenli alanların
-      doğru arka plan rengine sahip olmasını sağlar.
+      Bu, iPhone'un altındaki çubuk gibi güvenli alanların
+      navigasyon barınız ile aynı renkte olmasını sağlar.
     */
     @apply bg-white dark:bg-gray-800;
   }
