@@ -194,7 +194,7 @@ function App() {
   // --- Sayfa Yönlendirme ve Render ---
 
   if (loading) {
-    return <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex justify-center items-center"><div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div></div>;
+    return <div className="h-full w-full bg-gray-50 dark:bg-gray-900 flex justify-center items-center"><div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div></div>;
   }
 
   if (!session) {
@@ -216,7 +216,7 @@ function App() {
     const isSubPage = !['calendar', 'routines', 'progress', 'library', 'profile'].includes(currentView);
 
     return (
-      <header className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-4 shadow-lg">
+      <header className="flex-shrink-0 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-4 shadow-lg">
         <div className="max-w-md mx-auto flex items-center justify-between">
           <div className="w-10">
             {isSubPage && (
@@ -316,7 +316,7 @@ function App() {
     ];
 
     return (
-      <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-2 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] shadow-lg">
+      <nav className="flex-shrink-0 fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-2 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] shadow-lg">
         <div className="max-w-md mx-auto flex justify-around">
             {navItems.map(item => (
               <button key={item.view} onClick={() => setCurrentView(item.view as View)} className={`flex flex-col items-center gap-1 w-1/5 py-1 rounded-md ${currentView === item.view ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/50 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300'}`}>
@@ -330,9 +330,9 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="h-full w-full flex flex-col bg-gray-50 dark:bg-gray-900">
       {renderHeader()}
-      <main className="max-w-md mx-auto pb-24">
+      <main className="flex-1 overflow-y-auto w-full max-w-md mx-auto pb-24">
         {renderContent()}
       </main>
       {renderBottomNav()}
