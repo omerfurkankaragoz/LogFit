@@ -9,13 +9,15 @@ const BUCKET_NAME = 'images';
 
 interface CreateRoutineProps {
   existingRoutine: Routine | null;
-  onSaveRoutine: (id: string | null, name: string, exercises: { id: string; name: string }[]) => void;
+  // DEĞİŞİKLİK BURADA: onSaveRoutine artık bodyPart içeren bir array bekliyor
+  onSaveRoutine: (id: string | null, name: string, exercises: { id: string; name: string; bodyPart?: string }[]) => void;
   onCancel: () => void;
 }
 
 const CreateRoutine: React.FC<CreateRoutineProps> = ({ existingRoutine, onSaveRoutine, onCancel }) => {
   const [routineName, setRoutineName] = useState('');
-  const [selectedExercises, setSelectedExercises] = useState<{ id: string; name: string }[]>([]);
+  // DEĞİŞİKLİK BURADA: selectedExercises state'i artık bodyPart içeriyor
+  const [selectedExercises, setSelectedExercises] = useState<{ id: string; name: string; bodyPart?: string }[]>([]);
   const [manualExerciseName, setManualExerciseName] = useState('');
 
   // Library States
@@ -46,9 +48,13 @@ const CreateRoutine: React.FC<CreateRoutineProps> = ({ existingRoutine, onSaveRo
   useEffect(() => {
     if (existingRoutine) {
       setRoutineName(existingRoutine.name);
-      setSelectedExercises(existingRoutine.exercises);
+      // Mevcut rutin yüklenirken de bodyPart'ları (varsa) yükle
+      setSelectedExercises(existingRoutine.exercises.map(ex => {
+          const libEx = allLibraryExercises.find(lib => lib.name.toLowerCase() === ex.name.toLowerCase());
+          return {...ex, bodyPart: ex.bodyPart || libEx?.bodyPart }
+      }));
     }
-  }, [existingRoutine]);
+  }, [existingRoutine, allLibraryExercises]);
 
   const filteredLibraryExercises = useMemo(() => {
     const selectedExerciseNames = new Set(selectedExercises.map(ex => ex.name.toLowerCase()));
@@ -72,18 +78,21 @@ const CreateRoutine: React.FC<CreateRoutineProps> = ({ existingRoutine, onSaveRo
     return exercises;
   }, [searchQuery, selectedBodyPart, allLibraryExercises, selectedExercises]);
 
+  // DEĞİŞİKLİK BURADA: Kütüphaneden eklerken bodyPart bilgisini de alıyoruz.
   const handleAddExerciseFromLibrary = (exercise: LibraryExercise) => {
     if (!selectedExercises.find(e => e.name.toLowerCase() === exercise.name.toLowerCase())) {
-      setSelectedExercises(prev => [...prev, { id: exercise.id, name: exercise.name }]);
+      setSelectedExercises(prev => [...prev, { id: exercise.id, name: exercise.name, bodyPart: exercise.bodyPart }]);
     }
   };
 
   const handleManualAddExercise = () => {
     const trimmedName = manualExerciseName.trim();
     if (trimmedName && !selectedExercises.find(e => e.name.toLowerCase() === trimmedName.toLowerCase())) {
+      // Manuel eklenen hareketin bodyPart'ı olmaz. 'Diğer' olarak kategorize edilir.
       const newExercise = {
         id: `manual-${Date.now()}`,
         name: trimmedName,
+        bodyPart: undefined 
       };
       setSelectedExercises(prev => [...prev, newExercise]);
       setManualExerciseName('');
@@ -106,7 +115,6 @@ const CreateRoutine: React.FC<CreateRoutineProps> = ({ existingRoutine, onSaveRo
     onSaveRoutine(existingRoutine ? existingRoutine.id : null, routineName, selectedExercises);
   };
 
-  // GÜNCELLENDİ: Bu fonksiyon artık "0.jpg"yi "1.jpg" ile değiştiriyor.
   const getImageUrl = (gifPath: string) => {
     if (!gifPath) return 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop';
     
@@ -133,7 +141,6 @@ const CreateRoutine: React.FC<CreateRoutineProps> = ({ existingRoutine, onSaveRo
 
   return (
     <div className="p-4 space-y-6">
-      {/* Routine Name Input */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-100 dark:border-gray-700">
         <label htmlFor="routineName" className="block text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">
           Rutin Adı
@@ -141,7 +148,6 @@ const CreateRoutine: React.FC<CreateRoutineProps> = ({ existingRoutine, onSaveRo
         <input type="text" id="routineName" value={routineName} onChange={(e) => setRoutineName(e.target.value)} placeholder="Örn: İtiş Antrenmanı" className="w-full p-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base" />
       </div>
 
-      {/* Selected Exercises List */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-100 dark:border-gray-700 space-y-3">
         <h3 className="font-semibold text-lg text-gray-800 dark:text-gray-100 mb-2">Rutindeki Hareketler ({selectedExercises.length})</h3>
         {selectedExercises.length > 0 ? selectedExercises.map(ex => (
@@ -154,11 +160,9 @@ const CreateRoutine: React.FC<CreateRoutineProps> = ({ existingRoutine, onSaveRo
         )}
       </div>
 
-      {/* Add Exercise Section */}
       <div className="space-y-4 pt-6 mt-6 bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-100 dark:border-gray-700">
         <h3 className="font-semibold text-lg text-gray-800 dark:text-gray-100 mb-4">Hareket Ekle</h3>
         
-        {/* Manual Add */}
         <div>
             <label className="text-md font-medium text-gray-600 dark:text-gray-400 mb-1 block">Manuel Olarak Ekle</label>
             <div className="flex gap-3 mt-1">
@@ -169,14 +173,12 @@ const CreateRoutine: React.FC<CreateRoutineProps> = ({ existingRoutine, onSaveRo
             </div>
         </div>
 
-        {/* Separator */}
         <div className="flex items-center text-center my-4">
             <div className="flex-grow border-t border-gray-200 dark:border-gray-700"></div>
             <span className="flex-shrink mx-4 text-sm text-gray-500 dark:text-gray-400 uppercase">Veya Kütüphaneden Seç</span>
             <div className="flex-grow border-t border-gray-200 dark:border-gray-700"></div>
         </div>
 
-        {/* Library Search */}
         <div>
             <label className="text-md font-medium text-gray-600 dark:text-gray-400 mb-1 block">Kütüphaneden Ara</label>
             <div className="relative mt-1">
@@ -185,7 +187,6 @@ const CreateRoutine: React.FC<CreateRoutineProps> = ({ existingRoutine, onSaveRo
             </div>
         </div>
 
-        {/* Library List */}
         {loading ? (
             <div className="flex items-center justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>
         ) : (
@@ -213,13 +214,11 @@ const CreateRoutine: React.FC<CreateRoutineProps> = ({ existingRoutine, onSaveRo
         )}
       </div>
       
-      {/* Save/Cancel Buttons */}
       <div className="flex gap-3 mt-4">
         <button onClick={onCancel} className="flex-1 py-3 px-6 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 ease-in-out active:scale-95 shadow-md text-base">İptal</button>
         <button onClick={handleSave} className="flex-1 py-3 px-6 bg-blue-600 text-white rounded-xl flex items-center justify-center gap-2 hover:bg-blue-700 transition-all duration-200 ease-in-out active:scale-95 shadow-md text-base"><Save size={20} /> Kaydet</button>
       </div>
 
-      {/* Büyük görsel modalı */}
       {showLargeImage && currentLargeImageUrl && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4" onClick={closeLargeImage}>
           <div className="relative bg-white dark:bg-gray-800 rounded-2xl p-3 max-w-full max-h-full overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>

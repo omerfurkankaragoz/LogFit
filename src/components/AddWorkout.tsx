@@ -15,7 +15,7 @@ interface AddWorkoutProps {
   existingWorkout: Workout | null;
   routines: Routine[];
   workouts: Workout[]; // Önceki veriler için
-  onSave: (workout: Omit<Workout, 'id'>) => void;
+  onSave: (workout: Omit<Workout, 'id' | 'user_id' | 'created_at'>) => void;
   onCancel: () => void;
 }
 
@@ -25,7 +25,7 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
 
   // Library States
   const [allLibraryExercises, setAllLibraryExercises] = useState<LibraryExercise[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // Bu state'i kullanacağız
   const [searchQuery, setSearchQuery] = useState('');
   const [bodyParts, setBodyParts] = useState<string[]>([]);
 
@@ -39,7 +39,7 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
       const [parts, exercises] = await Promise.all([getBodyParts(), getAllExercises()]);
       setBodyParts(parts);
       setAllLibraryExercises(exercises);
-      setLoading(false);
+      setLoading(false); // Yükleme bittiğinde state'i false yapıyoruz
     };
     fetchInitialData();
   }, []);
@@ -72,16 +72,35 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
   };
 
   const handleAddExerciseToWorkout = (exercise: LibraryExercise) => {
-    const newExercise: Exercise = { id: `${Date.now()}`, name: exercise.name, sets: [{ reps: 0, weight: 0 }] };
+    const newExercise: Exercise = { 
+        id: `${Date.now()}`, 
+        name: exercise.name, 
+        bodyPart: exercise.bodyPart,
+        sets: [{ reps: 0, weight: 0 }] 
+    };
     setWorkoutExercises(prev => [newExercise, ...prev]);
-    setSearchQuery(''); // Aramayı temizle
+    setSearchQuery('');
   };
 
   const handleSelectRoutine = (routine: Routine) => {
     const existingExerciseNames = new Set(workoutExercises.map(ex => ex.name.toLowerCase()));
+    
     const newExercisesFromRoutine = routine.exercises
       .filter(ex => !existingExerciseNames.has(ex.name.toLowerCase()))
-      .map(ex => ({ id: Date.now().toString() + ex.name, name: ex.name, sets: [{ reps: 0, weight: 0 }] }));
+      .map(routineExercise => {
+        // Öncelik: Rutinin kendisindeki bodyPart bilgisi
+        // Yedek: Eğer rutinde yoksa (eski rutin), kütüphaneden bul
+        const libraryMatch = allLibraryExercises.find(libEx => libEx.name.toLowerCase() === routineExercise.name.toLowerCase());
+        const bodyPart = routineExercise.bodyPart || libraryMatch?.bodyPart;
+
+        return { 
+            id: Date.now().toString() + routineExercise.name, 
+            name: routineExercise.name, 
+            bodyPart: bodyPart, 
+            sets: [{ reps: 0, weight: 0 }] 
+        };
+      });
+      
     if (newExercisesFromRoutine.length > 0) {
       setWorkoutExercises(prev => [...prev, ...newExercisesFromRoutine]);
     }
@@ -94,7 +113,16 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
   };
 
   const removeWorkoutExercise = (exerciseId: string) => setWorkoutExercises(prev => prev.filter(ex => ex.id !== exerciseId));
-  const updateExerciseName = (exerciseId: string, name: string) => setWorkoutExercises(prev => prev.map(ex => (ex.id === exerciseId ? { ...ex, name } : ex)));
+  
+  const updateExerciseName = (exerciseId: string, name: string) => {
+      setWorkoutExercises(prev => prev.map(ex => {
+          if (ex.id === exerciseId) {
+              const libEx = allLibraryExercises.find(lib => lib.name.toLowerCase() === name.toLowerCase());
+              return { ...ex, name, bodyPart: libEx?.bodyPart };
+          }
+          return ex;
+      }));
+  };
 
   const addSet = (exerciseId: string) => {
     setWorkoutExercises(prev =>
@@ -127,19 +155,16 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
     onSave({ date, exercises: exercisesToSave });
   };
 
-  // GÜNCELLENDİ: Bu fonksiyon artık "0.jpg"yi "1.jpg" ile değiştiriyor.
   const getImageUrl = (gifPath: string | undefined) => {
     if (!gifPath) return 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop';
-    
-    // 0.jpg'yi 1.jpg ile değiştir
     const imagePath = gifPath.replace('0.jpg', '1.jpg');
-    
     return `${SUPABASE_PROJECT_URL}/storage/v1/object/public/images/exercises/${imagePath}`;
   };
 
-  const getBodyPartName = (bodyPart: string) => {
+  const getBodyPartName = (bodyPart?: string) => {
+    if (!bodyPart) return '';
     const names: { [key: string]: string } = { 'chest': 'Göğüs', 'back': 'Sırt', 'shoulders': 'Omuz', 'waist': 'Karın', 'cardio': 'Kardiyo', 'neck': 'Boyun', 'lower arms': 'Ön Kol', 'upper arms': 'Pazu/Arka Kol', 'lower legs': 'Alt Bacak', 'upper legs': 'Üst Bacak', 'abdominals': 'Karın' };
-    return names[bodyPart?.toLowerCase()] || bodyPart?.charAt(0).toUpperCase() + bodyPart?.slice(1) || '';
+    return names[bodyPart.toLowerCase()] || bodyPart.charAt(0).toUpperCase() + bodyPart.slice(1);
   };
 
   const handleImageClick = (imageUrl: string) => {
@@ -158,15 +183,20 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
         {format(new Date(date), 'dd MMMM yyyy', { locale: tr })} Antrenmanı
       </h2>
 
-      {/* Yeni Hareket Ekle */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-100 dark:border-gray-700 space-y-4">
         <h3 className="font-semibold text-lg text-gray-800 dark:text-gray-100">Yeni Hareket Ekle</h3>
         <div className="grid grid-cols-2 gap-3">
           <div className="relative">
-            <button onClick={() => setRoutinePickerOpen(prev => !prev)} className="w-full flex items-center justify-center gap-2 px-3 py-3 bg-green-600 text-white rounded-xl text-base font-semibold hover:bg-green-700 transition-all duration-200 ease-in-out active:scale-95 shadow-md">
-              <BookCopy size={20} /> Rutinden Ekle
+            {/* DEĞİŞİKLİK BURADA: Buton artık yükleme sırasında pasif */}
+            <button 
+              onClick={() => setRoutinePickerOpen(prev => !prev)} 
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-2 px-3 py-3 bg-green-600 text-white rounded-xl text-base font-semibold hover:bg-green-700 transition-all duration-200 ease-in-out active:scale-95 shadow-md disabled:bg-gray-400 disabled:cursor-not-allowed"
+            >
+              <BookCopy size={20} /> 
+              {loading ? 'Yükleniyor...' : 'Rutinden Ekle'}
             </button>
-            {isRoutinePickerOpen && (
+            {isRoutinePickerOpen && !loading && (
               <div className="absolute left-0 mt-2 w-full bg-white dark:bg-gray-800 rounded-xl shadow-xl z-20 border border-gray-200 dark:border-gray-700 overflow-hidden">
                 {routines.length > 0 ? routines.map(routine => (
                   <a key={routine.id} onClick={() => handleSelectRoutine(routine)} className="block px-4 py-3 text-base text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors">
@@ -210,13 +240,11 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
         )}
       </div>
       
-      {/* Antrenman Listesi */}
       <div className="space-y-6">
         {workoutExercises.length > 0 && <h3 className="font-semibold text-lg text-gray-800 dark:text-gray-100 mt-4">Antrenman Listesi</h3>}
         {workoutExercises.map((exercise) => {
           const libraryExercise = allLibraryExercises.find(libEx => libEx.name.toLowerCase() === exercise.name.toLowerCase());
           const imageUrl = getImageUrl(libraryExercise?.gifUrl);
-
           const previousExercise = getPreviousExerciseData(exercise.name);
           const previousMaxWeight = previousExercise && previousExercise.sets.length > 0 ? Math.max(...previousExercise.sets.map(s => s.weight)) : null;
           return (
@@ -256,7 +284,6 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
         })}
       </div>
 
-     {/* Kaydet/İptal Butonları */}
       <div className="fixed bottom-24 left-0 right-0 z-10 border-t border-gray-200 bg-white/90 px-4 py-2 backdrop-blur-sm dark:border-gray-700 dark:bg-gray-800/90">
         <div className="mx-auto flex max-w-md gap-3">
           <button onClick={onCancel} className="flex-1 rounded-xl border border-gray-300 py-2 px-6 text-base font-medium text-gray-800 shadow-md transition-all duration-200 ease-in-out hover:bg-gray-100 active:scale-95 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
@@ -268,7 +295,6 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
         </div>
       </div>
 
-      {/* Büyük Görsel Modalı */}
       {showLargeImage && currentLargeImageUrl && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4" onClick={closeLargeImage}>
           <div className="relative bg-white dark:bg-gray-800 rounded-2xl p-3 max-w-full max-h-full overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>

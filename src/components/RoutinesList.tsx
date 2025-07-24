@@ -6,7 +6,8 @@ import { getAllExercises, Exercise as LibraryExercise } from '../services/exerci
 export interface Routine {
   id: string;
   name: string;
-  exercises: { id: string; name: string }[];
+  // DEĞİŞİKLİK BURADA: exercises array'i artık bodyPart içerebilir
+  exercises: { id: string; name: string; bodyPart?: string }[];
 }
 
 interface RoutinesListProps {
@@ -102,27 +103,23 @@ const RoutinesList: React.FC<RoutinesListProps> = ({ routines, onAddNewRoutine, 
                 />
               </button>
 
-              {/* GÜNCELLENDİ: Açılır menünün içeriği */}
               {isExpanded && (
                 <div className="px-5 pb-5 pt-2">
                   <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-2">
                     <h4 className="font-semibold text-sm text-gray-700 dark:text-gray-300 mb-3">Egzersizler:</h4>
-                    {/* UL yerine DIV kullanarak liste işaretlerini kaldırdık */}
                     <div className="space-y-3">
                       {routine.exercises.map(ex => {
-                        // Her egzersiz için kütüphaneden görseli bul
                         const libEx = libraryExercises.find(lib => lib.id === ex.id || lib.name === ex.name);
                         const imageUrl = getImageUrl(libEx?.gifUrl);
 
                         return (
-                          // Her bir liste elemanı için flex container
                           <div key={ex.id} className="flex items-center gap-3">
                             <img
                               src={imageUrl}
                               alt={ex.name}
                               className="w-10 h-10 rounded-md object-cover cursor-pointer flex-shrink-0"
                               onClick={(e) => {
-                                e.stopPropagation(); // Kartın kapanmasını engelle
+                                e.stopPropagation();
                                 handleImageClick(imageUrl);
                               }}
                             />
@@ -153,7 +150,6 @@ const RoutinesList: React.FC<RoutinesListProps> = ({ routines, onAddNewRoutine, 
         })}
       </div>
 
-      {/* Görsel Büyütme Modalı */}
       {showLargeImage && currentLargeImageUrl && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4" onClick={closeLargeImage}>
           <div className="relative bg-white dark:bg-gray-800 rounded-2xl p-3 max-w-full max-h-full overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>

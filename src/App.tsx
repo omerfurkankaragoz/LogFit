@@ -13,11 +13,13 @@ import Auth from './components/Auth';
 import Profile from './components/Profile';
 import { supabase } from './services/supabaseClient';
 import { Session } from '@supabase/supabase-js';
+import { Exercise as LibraryExercise } from './services/exerciseApi';
 
 // Arayüzler (Interfaces)
 export interface Exercise {
   id: string;
   name: string;
+  bodyPart?: string; // Kas grubu analizi için eklendi
   sets: { reps: number; weight: number }[];
 }
 export interface Workout {
@@ -93,19 +95,21 @@ function App() {
 
   // --- Veri Kaydetme / Güncelleme / Silme ---
 
-  const handleSaveWorkout = async (workoutData: Omit<Workout, 'id' | 'created_at' | 'user_id'>) => {
-    if (!session) return;
-    const workoutToUpdate = editingWorkout;
-    const workoutPayload = { ...workoutData, user_id: session.user.id };
-
-    if (workoutToUpdate && workoutToUpdate.id !== 'new') {
-      await supabase.from('workouts').update({ exercises: workoutPayload.exercises, date: workoutPayload.date }).eq('id', workoutToUpdate.id);
-    } else {
-      await supabase.from('workouts').insert([workoutPayload]);
-    }
-    setEditingWorkout(null);
-    await fetchAllData();
-    setCurrentView('calendar');
+  const handleSaveWorkout = async (workoutData: Omit<Workout, 'id' | 'user_id' | 'created_at'>) => {
+      if (!session) return;
+      const workoutToUpdate = editingWorkout;
+      const workoutPayload = { ...workoutData, user_id: session.user.id };
+  
+      if (workoutToUpdate && workoutToUpdate.id !== 'new') {
+          // Güncelleme: exercises ve date alanlarını güncelle
+          await supabase.from('workouts').update({ exercises: workoutPayload.exercises, date: workoutPayload.date }).eq('id', workoutToUpdate.id);
+      } else {
+          // Ekleme: Yeni antrenman ekle
+          await supabase.from('workouts').insert([workoutPayload]);
+      }
+      setEditingWorkout(null);
+      await fetchAllData();
+      setCurrentView('calendar');
   };
 
   const handleSaveRoutine = async (id: string | null, name: string, exercises: { id: string; name: string }[]) => {
@@ -146,7 +150,7 @@ function App() {
     setCurrentView('calendar');
   };
   
-  const handleAddExerciseFromLibrary = (exerciseToAdd: { id: string; name: string; }) => {
+  const handleAddExerciseFromLibrary = (exerciseToAdd: LibraryExercise) => {
     const todayStr = new Date().toISOString().split('T')[0];
     
     const workoutForToday = workouts.find(w => w.date === todayStr);
@@ -155,6 +159,7 @@ function App() {
     const newExercise: Exercise = {
         id: `${exerciseToAdd.id}-${Date.now()}`,
         name: exerciseToAdd.name,
+        bodyPart: exerciseToAdd.bodyPart, // Kas grubu analizi için eklendi
         sets: [{ reps: 0, weight: 0 }]
     };
 
@@ -181,12 +186,14 @@ function App() {
     handleSetView('add');
   };
 
+  // 5. MADDE İÇİN GÜNCELLENDİ
   const handleStartOrContinueWorkout = () => {
     const todayStr = new Date().toISOString().split('T')[0];
     const workoutForToday = workouts.find(w => w.date === todayStr);
 
     setSelectedDate(todayStr);
-    setEditingWorkout(workoutForToday || null);
+    // Eğer bugün için antrenman varsa onu yükle, yoksa 'null' ile yeni antrenman sayfasına git
+    setEditingWorkout(workoutForToday || null); 
     handleSetView('add');
   };
 
