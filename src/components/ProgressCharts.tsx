@@ -45,15 +45,17 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     return null;
 };
 
-// YENİ: Detaylı kas gruplarını ana gruplara eşleyen fonksiyon
+// Detaylı kas gruplarını ana gruplara eşleyen fonksiyon
 const mapToMajorGroup = (bodyPart: string): string => {
     if (!bodyPart) return 'Diğer';
     const lowerCaseBodyPart = bodyPart.toLowerCase();
 
     if (['chest'].includes(lowerCaseBodyPart)) return 'Göğüs';
-    if (['back'].includes(lowerCaseBodyPart)) return 'Sırt';
+    // DEĞİŞİKLİK BURADA: 'lats' kası 'Sırt' grubuna eklendi.
+    if (['back', 'lats'].includes(lowerCaseBodyPart)) return 'Sırt';
     if (['shoulders'].includes(lowerCaseBodyPart)) return 'Omuz';
-    if (['upper arms', 'lower arms'].includes(lowerCaseBodyPart)) return 'Kol';
+    if (['upper arms', 'lower arms', 'biceps',].includes(lowerCaseBodyPart)) return 'Ön Kol';
+    if (['triceps'].includes(lowerCaseBodyPart)) return 'Arka Kol';
     if (['upper legs', 'lower legs', 'quadriceps', 'hamstrings', 'glutes'].includes(lowerCaseBodyPart)) return 'Bacak';
     if (['waist', 'abdominals'].includes(lowerCaseBodyPart)) return 'Karın';
     
@@ -118,10 +120,9 @@ const ProgressCharts: React.FC<{ workouts: Workout[] }> = ({ workouts }) => {
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, [filteredWorkouts]);
 
-  // YENİ: Radar grafik için veri hazırlama
   const radarChartData = useMemo(() => {
     const distribution: { [key: string]: number } = {
-        'Göğüs': 0, 'Sırt': 0, 'Omuz': 0, 'Kol': 0, 'Bacak': 0, 'Karın': 0
+        'Göğüs': 0, 'Sırt': 0, 'Omuz': 0, 'Arka Kol': 0,'Ön Kol': 0, 'Bacak': 0, 'Karın': 0
     };
 
     filteredWorkouts.forEach(workout => {
@@ -138,7 +139,7 @@ const ProgressCharts: React.FC<{ workouts: Workout[] }> = ({ workouts }) => {
     const maxValue = Math.max(...data.map(d => d.value));
 
     return {
-        data: data.map(d => ({...d, fullMark: maxValue > 0 ? maxValue * 1.2 : 100 })), // Grafiğin ölçeği için
+        data: data.map(d => ({...d, fullMark: maxValue > 0 ? maxValue * 1.2 : 100 })),
         hasData: maxValue > 0
     };
   }, [filteredWorkouts]);
@@ -185,7 +186,6 @@ const ProgressCharts: React.FC<{ workouts: Workout[] }> = ({ workouts }) => {
                 <div className="mb-6"><h4 className="text-md font-medium text-gray-600 dark:text-gray-300 mb-3">Toplam Volüm (kg)</h4><div className="h-56"><ResponsiveContainer width="100%" height="100%"><LineChart data={generalStats}><CartesianGrid strokeDasharray="3 3" stroke={chartStyles.gridColor} /><XAxis dataKey="dateFormatted" tick={{ fontSize: 12, fill: chartStyles.tickColor }} axisLine={{ stroke: chartStyles.axisLineColor }} tickLine={{ stroke: chartStyles.tickColor }} /><YAxis tick={{ fontSize: 12, fill: chartStyles.tickColor }} axisLine={{ stroke: chartStyles.axisLineColor }} tickLine={{ stroke: chartStyles.tickColor }} /><Tooltip content={<CustomTooltip />} /><Line type="monotone" dataKey="totalVolume" name="Toplam Volüm" unit=" kg" stroke="#3B82F6" strokeWidth={3} dot={{ fill: '#3B82F6', r: 5 }} activeDot={{ r: 7 }} /></LineChart></ResponsiveContainer></div></div>
                 <div className="mb-8"><h4 className="text-md font-medium text-gray-600 dark:text-gray-300 mb-3">Toplam Set Sayısı</h4><div className="h-56"><ResponsiveContainer width="100%" height="100%"><BarChart data={generalStats}><CartesianGrid strokeDasharray="3 3" stroke={chartStyles.gridColor} /><XAxis dataKey="dateFormatted" tick={{ fontSize: 12, fill: chartStyles.tickColor }} axisLine={{ stroke: chartStyles.axisLineColor }} tickLine={{ stroke: chartStyles.tickColor }} /><YAxis tick={{ fontSize: 12, fill: chartStyles.tickColor }} allowDecimals={false} axisLine={{ stroke: chartStyles.axisLineColor }} tickLine={{ stroke: chartStyles.tickColor }} /><Tooltip content={<CustomTooltip />} cursor={{fill: 'rgba(249, 115, 22, 0.1)'}}/><Bar dataKey="totalSets" name="Toplam Set" unit=" set" radius={[6, 6, 0, 0]} barSize={20} fill="#F97316" /></BarChart></ResponsiveContainer></div></div>
                 
-                {/* YENİ RADAR GRAFİK */}
                 {radarChartData.hasData && (
                 <div>
                     <h4 className="text-md font-medium text-gray-600 dark:text-gray-300 mb-3">Kas Grubu Dağılımı (Hacme Göre)</h4>
