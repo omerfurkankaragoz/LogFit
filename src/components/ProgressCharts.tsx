@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { 
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-    BarChart, Bar, Cell, Legend,
+    BarChart, Bar,
     RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar
 } from 'recharts';
 import { format, parseISO, subDays, subMonths, subYears, isAfter } from 'date-fns';
@@ -45,16 +45,15 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     return null;
 };
 
-// Detaylı kas gruplarını ana gruplara eşleyen fonksiyon
+// Detaylı kas gruplarını ana gruplara eşleyen fonksiyon (Sizin istediğiniz haliyle)
 const mapToMajorGroup = (bodyPart: string): string => {
     if (!bodyPart) return 'Diğer';
     const lowerCaseBodyPart = bodyPart.toLowerCase();
 
     if (['chest'].includes(lowerCaseBodyPart)) return 'Göğüs';
-    // DEĞİŞİKLİK BURADA: 'lats' kası 'Sırt' grubuna eklendi.
     if (['back', 'lats'].includes(lowerCaseBodyPart)) return 'Sırt';
     if (['shoulders'].includes(lowerCaseBodyPart)) return 'Omuz';
-    if (['upper arms', 'lower arms', 'biceps',].includes(lowerCaseBodyPart)) return 'Ön Kol';
+    if (['upper arms', 'lower arms', 'biceps'].includes(lowerCaseBodyPart)) return 'Ön Kol';
     if (['triceps'].includes(lowerCaseBodyPart)) return 'Arka Kol';
     if (['upper legs', 'lower legs', 'quadriceps', 'hamstrings', 'glutes'].includes(lowerCaseBodyPart)) return 'Bacak';
     if (['waist', 'abdominals'].includes(lowerCaseBodyPart)) return 'Karın';
@@ -121,6 +120,7 @@ const ProgressCharts: React.FC<{ workouts: Workout[] }> = ({ workouts }) => {
   }, [filteredWorkouts]);
 
   const radarChartData = useMemo(() => {
+    // Sizin istediğiniz haliyle, Ön Kol/Arka Kol ayrımıyla
     const distribution: { [key: string]: number } = {
         'Göğüs': 0, 'Sırt': 0, 'Omuz': 0, 'Arka Kol': 0,'Ön Kol': 0, 'Bacak': 0, 'Karın': 0
     };
@@ -183,11 +183,10 @@ const ProgressCharts: React.FC<{ workouts: Workout[] }> = ({ workouts }) => {
         <>
             <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-100 dark:border-gray-700">
                 <h3 className="font-bold text-xl text-gray-800 dark:text-gray-100 mb-4">Genel İlerleme</h3>
-                <div className="mb-6"><h4 className="text-md font-medium text-gray-600 dark:text-gray-300 mb-3">Toplam Volüm (kg)</h4><div className="h-56"><ResponsiveContainer width="100%" height="100%"><LineChart data={generalStats}><CartesianGrid strokeDasharray="3 3" stroke={chartStyles.gridColor} /><XAxis dataKey="dateFormatted" tick={{ fontSize: 12, fill: chartStyles.tickColor }} axisLine={{ stroke: chartStyles.axisLineColor }} tickLine={{ stroke: chartStyles.tickColor }} /><YAxis tick={{ fontSize: 12, fill: chartStyles.tickColor }} axisLine={{ stroke: chartStyles.axisLineColor }} tickLine={{ stroke: chartStyles.tickColor }} /><Tooltip content={<CustomTooltip />} /><Line type="monotone" dataKey="totalVolume" name="Toplam Volüm" unit=" kg" stroke="#3B82F6" strokeWidth={3} dot={{ fill: '#3B82F6', r: 5 }} activeDot={{ r: 7 }} /></LineChart></ResponsiveContainer></div></div>
-                <div className="mb-8"><h4 className="text-md font-medium text-gray-600 dark:text-gray-300 mb-3">Toplam Set Sayısı</h4><div className="h-56"><ResponsiveContainer width="100%" height="100%"><BarChart data={generalStats}><CartesianGrid strokeDasharray="3 3" stroke={chartStyles.gridColor} /><XAxis dataKey="dateFormatted" tick={{ fontSize: 12, fill: chartStyles.tickColor }} axisLine={{ stroke: chartStyles.axisLineColor }} tickLine={{ stroke: chartStyles.tickColor }} /><YAxis tick={{ fontSize: 12, fill: chartStyles.tickColor }} allowDecimals={false} axisLine={{ stroke: chartStyles.axisLineColor }} tickLine={{ stroke: chartStyles.tickColor }} /><Tooltip content={<CustomTooltip />} cursor={{fill: 'rgba(249, 115, 22, 0.1)'}}/><Bar dataKey="totalSets" name="Toplam Set" unit=" set" radius={[6, 6, 0, 0]} barSize={20} fill="#F97316" /></BarChart></ResponsiveContainer></div></div>
                 
+                {/* DÜZELTME BURADA: Grafiklerin sırası değiştirildi */}
                 {radarChartData.hasData && (
-                <div>
+                <div className="mb-8">
                     <h4 className="text-md font-medium text-gray-600 dark:text-gray-300 mb-3">Kas Grubu Dağılımı (Hacme Göre)</h4>
                     <div className="h-80 w-full"><ResponsiveContainer>
                         <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarChartData.data}>
@@ -200,6 +199,11 @@ const ProgressCharts: React.FC<{ workouts: Workout[] }> = ({ workouts }) => {
                     </ResponsiveContainer></div>
                 </div>
                 )}
+                
+                <div className="mb-6"><h4 className="text-md font-medium text-gray-600 dark:text-gray-300 mb-3">Toplam Volüm (kg)</h4><div className="h-56"><ResponsiveContainer width="100%" height="100%"><LineChart data={generalStats}><CartesianGrid strokeDasharray="3 3" stroke={chartStyles.gridColor} /><XAxis dataKey="dateFormatted" tick={{ fontSize: 12, fill: chartStyles.tickColor }} axisLine={{ stroke: chartStyles.axisLineColor }} tickLine={{ stroke: chartStyles.tickColor }} /><YAxis tick={{ fontSize: 12, fill: chartStyles.tickColor }} axisLine={{ stroke: chartStyles.axisLineColor }} tickLine={{ stroke: chartStyles.tickColor }} /><Tooltip content={<CustomTooltip />} /><Line type="monotone" dataKey="totalVolume" name="Toplam Volüm" unit=" kg" stroke="#3B82F6" strokeWidth={3} dot={{ fill: '#3B82F6', r: 5 }} activeDot={{ r: 7 }} /></LineChart></ResponsiveContainer></div></div>
+                
+                <div className="mb-8"><h4 className="text-md font-medium text-gray-600 dark:text-gray-300 mb-3">Toplam Set Sayısı</h4><div className="h-56"><ResponsiveContainer width="100%" height="100%"><BarChart data={generalStats}><CartesianGrid strokeDasharray="3 3" stroke={chartStyles.gridColor} /><XAxis dataKey="dateFormatted" tick={{ fontSize: 12, fill: chartStyles.tickColor }} axisLine={{ stroke: chartStyles.axisLineColor }} tickLine={{ stroke: chartStyles.tickColor }} /><YAxis tick={{ fontSize: 12, fill: chartStyles.tickColor }} allowDecimals={false} axisLine={{ stroke: chartStyles.axisLineColor }} tickLine={{ stroke: chartStyles.tickColor }} /><Tooltip content={<CustomTooltip />} cursor={{fill: 'rgba(249, 115, 22, 0.1)'}}/><Bar dataKey="totalSets" name="Toplam Set" unit=" set" radius={[6, 6, 0, 0]} barSize={20} fill="#F97316" /></BarChart></ResponsiveContainer></div></div>
+
             </div>
 
             <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-100 dark:border-gray-700">
