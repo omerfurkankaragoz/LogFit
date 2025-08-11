@@ -207,7 +207,7 @@ function App() {
   if (!session) {
     return <Auth />;
   }
-
+/* eski header bunu silme
   const renderHeader = () => {
     const titles: Record<View, string> = {
       calendar: 'Takvim',
@@ -249,7 +249,17 @@ function App() {
         </div>
       </header>
     );
-  };
+    
+  };*/
+ const renderHeader = () => {
+ // Bu header, sadece telefonun üstündeki çentik/durum çubuğu alanını doldurur.
+ // Yüksekliği dinamik olarak 'safe-area-inset-top' ile belirlenir.
+ // İçinde herhangi bir yazı veya buton bulunmaz.
+ return (
+<header className="sticky top-0 z-20 h-[env(safe-area-inset-top)] bg-gradient-to-r from-gray-900 to-gray-900" />
+ );
+ };
+
 
   const renderContent = () => {
     switch (currentView) {
