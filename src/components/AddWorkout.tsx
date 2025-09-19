@@ -246,39 +246,75 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
           const libraryExercise = allLibraryExercises.find(libEx => libEx.name.toLowerCase() === exercise.name.toLowerCase());
           const imageUrl = getImageUrl(libraryExercise?.gifUrl);
           const previousExercise = getPreviousExerciseData(exercise.name);
-          const previousMaxWeight = previousExercise && previousExercise.sets.length > 0 ? Math.max(...previousExercise.sets.map(s => s.weight)) : null;
+          
           return (
             <div key={exercise.id} className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-lg border border-gray-100 dark:border-gray-700">
               <div className="flex items-center gap-3 mb-4">
                 <div 
-                  className="w-11 h-11 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700 flex-shrink-0 cursor-pointer shadow-sm"
+                  className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700 flex-shrink-0 cursor-pointer shadow-sm"
                   onClick={() => handleImageClick(imageUrl)}
                 >
                   <img src={imageUrl} alt={exercise.name} className="w-full h-full object-cover" />
                 </div>
-                <div className="flex-1 flex items-center gap-2">
-                    <input type="text" value={exercise.name} onChange={(e) => updateExerciseName(exercise.id, e.target.value)} placeholder="Hareket adı" className="flex-1 p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-base" />
-                    <button onClick={() => removeWorkoutExercise(exercise.id)} className="p-3 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-lg transition-colors active:scale-95"> <Trash2 size={20} /> </button>
+                <div className="flex-1 min-w-0">
+                  <input 
+                    type="text" 
+                    value={exercise.name} 
+                    onChange={(e) => updateExerciseName(exercise.id, e.target.value)} 
+                    placeholder="Hareket Adı" 
+                    className="w-full p-0 border-none bg-transparent text-lg font-semibold text-gray-800 dark:text-gray-200 focus:ring-0" 
+                  />
                 </div>
+                <button onClick={() => removeWorkoutExercise(exercise.id)} className="p-2 text-gray-400 hover:text-red-500 rounded-lg transition-colors active:scale-95">
+                  <Trash2 size={20} />
+                </button>
               </div>
 
               <div className="space-y-2">
-                <div className="grid grid-cols-5 gap-2 text-sm font-medium text-gray-600 dark:text-gray-400 px-1">
-                  <span>Set</span><span>Önceki</span><span>Kg</span><span>Tekrar</span><span></span>
+                <div className="grid grid-cols-[30px,1fr,80px,80px,30px] gap-2 text-sm font-medium text-gray-500 dark:text-gray-400 px-1 text-center">
+                  <span>Set</span>
+                  <span>Önceki</span>
+                  <span>Kg</span>
+                  <span>Tekrar</span>
+                  <span></span>
                 </div>
-                {exercise.sets.map((set, setIndex) => (
-                  <div key={setIndex} className="grid grid-cols-5 gap-2 items-center">
-                    <span className="text-center font-medium text-gray-600 dark:text-gray-300 text-sm">{setIndex + 1}</span>
-                    <div className="text-center text-xs font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 p-2 rounded-md h-full flex items-center justify-center">
-                      {previousMaxWeight !== null ? `${previousMaxWeight}kg` : '-'}
+                {exercise.sets.map((set, setIndex) => {
+                  const previousSet = previousExercise?.sets[setIndex];
+                  const previousSetDisplay = previousSet ? `${previousSet.weight} kg x ${previousSet.reps}` : '-';
+                  
+                  return (
+                    <div key={setIndex} className="grid grid-cols-[30px,1fr,80px,80px,30px] gap-2 items-center">
+                      <span className="text-center font-medium text-gray-600 dark:text-gray-300 text-base">{setIndex + 1}</span>
+                      <div className="text-center text-sm font-medium text-gray-500 dark:text-gray-400 h-full flex items-center justify-center">
+                        {previousSetDisplay}
+                      </div>
+                      <input 
+                        type="number" 
+                        inputMode="decimal" 
+                        value={set.weight || ''} 
+                        onChange={(e) => updateSet(exercise.id, setIndex, 'weight', parseFloat(e.target.value) || 0)} 
+                        placeholder="0" 
+                        step="0.5" 
+                        className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg text-center focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-base" 
+                      />
+                      <input 
+                        type="number" 
+                        inputMode="numeric" 
+                        value={set.reps || ''} 
+                        onChange={(e) => updateSet(exercise.id, setIndex, 'reps', parseInt(e.target.value) || 0)} 
+                        placeholder="0" 
+                        className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg text-center focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-base" 
+                      />
+                      <button onClick={() => removeSet(exercise.id, setIndex)} className="text-gray-400 hover:text-red-500 m-auto p-1 rounded-md transition-colors active:scale-95">
+                        <Trash2 size={18}/>
+                      </button>
                     </div>
-                    <input type="number" inputMode="decimal" value={set.weight || ''} onChange={(e) => updateSet(exercise.id, setIndex, 'weight', parseFloat(e.target.value) || 0)} placeholder="0" step="0.5" className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg text-center focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 text-base" />
-                    <input type="number" inputMode="numeric" value={set.reps || ''} onChange={(e) => updateSet(exercise.id, setIndex, 'reps', parseInt(e.target.value) || 0)} placeholder="0" className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg text-center focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 text-base" />
-                    <button onClick={() => removeSet(exercise.id, setIndex)} className="text-gray-400 hover:text-red-500 m-auto p-1 rounded-md transition-colors active:scale-95"> <Trash2 size={18}/> </button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
-              <button onClick={() => addSet(exercise.id)} className="w-full mt-4 p-2 text-blue-600 border-2 border-blue-200 dark:border-blue-800 border-dashed rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/50 transition-colors active:scale-95 text-base font-medium"> + Set Ekle </button>
+              <button onClick={() => addSet(exercise.id)} className="w-full mt-4 p-2 text-blue-600 border-2 border-blue-200 dark:border-blue-800 border-dashed rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/50 transition-colors active:scale-95 text-base font-medium">
+                + Set Ekle
+              </button>
             </div>
           );
         })}
