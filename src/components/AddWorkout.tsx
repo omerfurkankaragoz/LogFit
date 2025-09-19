@@ -1,6 +1,6 @@
 // src/components/AddWorkout.tsx
 import React, { useState, useEffect, useMemo } from 'react';
-import { Plus, Trash2, Save, BookCopy, Search, X } from 'lucide-react';
+import { Plus, Trash2, Save, BookCopy, Search, X, ArrowLeft } from 'lucide-react';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { Exercise, Workout } from '../App';
@@ -22,10 +22,11 @@ interface AddWorkoutProps {
 const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines, workouts, onSave, onCancel }) => {
   const [workoutExercises, setWorkoutExercises] = useState<Exercise[]>([]);
   const [isRoutinePickerOpen, setRoutinePickerOpen] = useState(false);
+  const [addExerciseSectionPosition, setAddExerciseSectionPosition] = useState<'top' | 'bottom'>('top');
 
   // Library States
   const [allLibraryExercises, setAllLibraryExercises] = useState<LibraryExercise[]>([]);
-  const [loading, setLoading] = useState(true); // Bu state'i kullanacağız
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [bodyParts, setBodyParts] = useState<string[]>([]);
 
@@ -39,7 +40,7 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
       const [parts, exercises] = await Promise.all([getBodyParts(), getAllExercises()]);
       setBodyParts(parts);
       setAllLibraryExercises(exercises);
-      setLoading(false); // Yükleme bittiğinde state'i false yapıyoruz
+      setLoading(false);
     };
     fetchInitialData();
   }, []);
@@ -51,6 +52,15 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
       setWorkoutExercises([]);
     }
   }, [existingWorkout]);
+  
+  useEffect(() => {
+    if (workoutExercises.length > 0) {
+      setAddExerciseSectionPosition('bottom');
+    } else {
+      setAddExerciseSectionPosition('top');
+    }
+  }, [workoutExercises.length]);
+
 
   const filteredLibraryExercises = useMemo(() => {
     const workoutExerciseNames = new Set(workoutExercises.map(ex => ex.name.toLowerCase()));
@@ -63,44 +73,42 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
 
   const getPreviousExerciseData = (exerciseName: string): Exercise | null => {
     if (!exerciseName) return null;
-    const sortedWorkouts = [...workouts].filter(w => w.date < date).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const pastWorkouts = workouts.filter(w => new Date(w.date) < new Date(date));
+    const sortedWorkouts = pastWorkouts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     for (const prevWorkout of sortedWorkouts) {
       const exercise = prevWorkout.exercises.find(ex => ex.name.toLowerCase() === exerciseName.toLowerCase());
-      if (exercise) return exercise;
+      if (exercise) {
+        return exercise;
+      }
     }
     return null;
   };
 
   const handleAddExerciseToWorkout = (exercise: LibraryExercise) => {
-    const newExercise: Exercise = { 
-        id: `${Date.now()}`, 
-        name: exercise.name, 
-        bodyPart: exercise.bodyPart,
-        sets: [{ reps: 0, weight: 0 }] 
+    const newExercise: Exercise = {
+      id: `lib-${exercise.id}-${Date.now()}`,
+      name: exercise.name,
+      bodyPart: exercise.bodyPart,
+      sets: [{ reps: 0, weight: 0 }]
     };
-    setWorkoutExercises(prev => [newExercise, ...prev]);
+    setWorkoutExercises(prev => [...prev, newExercise]);
     setSearchQuery('');
   };
 
   const handleSelectRoutine = (routine: Routine) => {
     const existingExerciseNames = new Set(workoutExercises.map(ex => ex.name.toLowerCase()));
-    
     const newExercisesFromRoutine = routine.exercises
       .filter(ex => !existingExerciseNames.has(ex.name.toLowerCase()))
-      .map(routineExercise => {
-        // Öncelik: Rutinin kendisindeki bodyPart bilgisi
-        // Yedek: Eğer rutinde yoksa (eski rutin), kütüphaneden bul
+      .map((routineExercise, index) => {
         const libraryMatch = allLibraryExercises.find(libEx => libEx.name.toLowerCase() === routineExercise.name.toLowerCase());
         const bodyPart = routineExercise.bodyPart || libraryMatch?.bodyPart;
-
-        return { 
-            id: Date.now().toString() + routineExercise.name, 
-            name: routineExercise.name, 
-            bodyPart: bodyPart, 
-            sets: [{ reps: 0, weight: 0 }] 
+        return {
+          id: `routine-${routineExercise.id}-${Date.now() + index}`,
+          name: routineExercise.name,
+          bodyPart: bodyPart,
+          sets: [{ reps: 0, weight: 0 }]
         };
       });
-      
     if (newExercisesFromRoutine.length > 0) {
       setWorkoutExercises(prev => [...prev, ...newExercisesFromRoutine]);
     }
@@ -108,20 +116,19 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
   };
 
   const addManualExercise = () => {
-    const newExercise: Exercise = { id: Date.now().toString(), name: '', sets: [{ reps: 0, weight: 0 }] };
-    setWorkoutExercises(prev => [newExercise, ...prev]);
+    const newExercise: Exercise = { id: `manual-${Date.now()}`, name: '', sets: [{ reps: 0, weight: 0 }] };
+    setWorkoutExercises(prev => [...prev, newExercise]);
   };
 
   const removeWorkoutExercise = (exerciseId: string) => setWorkoutExercises(prev => prev.filter(ex => ex.id !== exerciseId));
-  
+
   const updateExerciseName = (exerciseId: string, name: string) => {
-      setWorkoutExercises(prev => prev.map(ex => {
-          if (ex.id === exerciseId) {
-              const libEx = allLibraryExercises.find(lib => lib.name.toLowerCase() === name.toLowerCase());
-              return { ...ex, name, bodyPart: libEx?.bodyPart };
-          }
-          return ex;
-      }));
+    setWorkoutExercises(prev => prev.map(ex => {
+      if (ex.id === exerciseId && ex.id.startsWith('manual-')) {
+        return { ...ex, name };
+      }
+      return ex;
+    }));
   };
 
   const addSet = (exerciseId: string) => {
@@ -161,12 +168,6 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
     return `${SUPABASE_PROJECT_URL}/storage/v1/object/public/images/exercises/${imagePath}`;
   };
 
-  const getBodyPartName = (bodyPart?: string) => {
-    if (!bodyPart) return '';
-    const names: { [key: string]: string } = { 'chest': 'Göğüs', 'back': 'Sırt', 'shoulders': 'Omuz', 'waist': 'Karın', 'cardio': 'Kardiyo', 'neck': 'Boyun', 'lower arms': 'Ön Kol', 'upper arms': 'Pazu/Arka Kol', 'lower legs': 'Alt Bacak', 'upper legs': 'Üst Bacak', 'abdominals': 'Karın' };
-    return names[bodyPart.toLowerCase()] || bodyPart.charAt(0).toUpperCase() + bodyPart.slice(1);
-  };
-
   const handleImageClick = (imageUrl: string) => {
     setCurrentLargeImageUrl(imageUrl);
     setShowLargeImage(true);
@@ -176,150 +177,171 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
     setShowLargeImage(false);
     setCurrentLargeImageUrl(null);
   };
-
-  return (
-    <div className="p-4 space-y-6 pb-36">
-      <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">
-        {format(new Date(date), 'dd MMMM yyyy', { locale: tr })} Antrenmanı
-      </h2>
-
-      <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-100 dark:border-gray-700 space-y-4">
-        <h3 className="font-semibold text-lg text-gray-800 dark:text-gray-100">Yeni Hareket Ekle</h3>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="relative">
-            {/* DEĞİŞİKLİK BURADA: Buton artık yükleme sırasında pasif */}
-            <button 
-              onClick={() => setRoutinePickerOpen(prev => !prev)} 
-              disabled={loading}
-              className="w-full flex items-center justify-center gap-2 px-3 py-3 bg-green-600 text-white rounded-xl text-base font-semibold hover:bg-green-700 transition-all duration-200 ease-in-out active:scale-95 shadow-md disabled:bg-gray-400 disabled:cursor-not-allowed"
-            >
-              <BookCopy size={20} /> 
-              {loading ? 'Yükleniyor...' : 'Rutinden Ekle'}
-            </button>
-            {isRoutinePickerOpen && !loading && (
-              <div className="absolute left-0 mt-2 w-full bg-white dark:bg-gray-800 rounded-xl shadow-xl z-20 border border-gray-200 dark:border-gray-700 overflow-hidden">
-                {routines.length > 0 ? routines.map(routine => (
-                  <a key={routine.id} onClick={() => handleSelectRoutine(routine)} className="block px-4 py-3 text-base text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors">
-                    {routine.name}
-                  </a>
-                )) : <span className="block px-4 py-3 text-base text-gray-500 dark:text-gray-400">Kayıtlı rutin yok.</span>}
-              </div>
-            )}
-          </div>
-          <button onClick={addManualExercise} className="w-full flex items-center justify-center gap-2 px-3 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl text-base font-semibold hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200 ease-in-out active:scale-95 shadow-md">
-            <Plus size={20} /> Manuel Ekle
-          </button>
-        </div>
+  
+  const AddExerciseSection = (
+    <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-100 dark:border-gray-700 space-y-4">
+      <h3 className="font-semibold text-lg text-gray-800 dark:text-gray-100">Yeni Hareket Ekle</h3>
+      <div className="grid grid-cols-2 gap-3">
         <div className="relative">
-          <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" />
-          <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Veya kütüphaneden hareket ara..." className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 text-base" />
+          <button 
+            onClick={() => setRoutinePickerOpen(prev => !prev)} 
+            disabled={loading}
+            className="w-full flex items-center justify-center gap-2 px-3 py-3 bg-green-600 text-white rounded-xl text-base font-semibold hover:bg-green-700 transition-all duration-200 ease-in-out active:scale-95 shadow-md disabled:bg-gray-400 disabled:cursor-not-allowed"
+          >
+            <BookCopy size={20} /> 
+            {loading ? 'Yükleniyor...' : 'Rutinden Ekle'}
+          </button>
+          {isRoutinePickerOpen && !loading && (
+            <div className="absolute left-0 mt-2 w-full bg-white dark:bg-gray-800 rounded-xl shadow-xl z-20 border border-gray-200 dark:border-gray-700 overflow-hidden">
+              {routines.length > 0 ? routines.map(routine => (
+                <a key={routine.id} onClick={() => handleSelectRoutine(routine)} className="block px-4 py-3 text-base text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors">
+                  {routine.name}
+                </a>
+              )) : <span className="block px-4 py-3 text-base text-gray-500 dark:text-gray-400">Kayıtlı rutin yok.</span>}
+            </div>
+          )}
         </div>
-        {loading ? (
-          <div className="flex items-center justify-center py-6"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>
-        ) : searchQuery.trim() && (
-          <div className="space-y-3 max-h-[40vh] overflow-y-auto p-1 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
-            {filteredLibraryExercises.length > 0 ? filteredLibraryExercises.map(exercise => (
-              <div key={exercise.id} className="bg-gray-50 dark:bg-gray-700 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-600 hover:shadow-md transition-shadow transform hover:scale-[1.01] active:scale-[0.99]">
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-600 flex-shrink-0 cursor-pointer shadow-sm" onClick={() => handleImageClick(getImageUrl(exercise.gifUrl))}>
-                    <img src={getImageUrl(exercise.gifUrl)} alt={exercise.name} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.src = 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop'; }}/>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-base text-gray-800 dark:text-gray-200 truncate">{exercise.name}</h3>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 px-3 py-1 rounded-full font-medium">{getBodyPartName(exercise.bodyPart)}</span>
-                    </div>
-                  </div>
-                  <button onClick={() => handleAddExerciseToWorkout(exercise)} className="p-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all duration-200 ease-in-out active:scale-95 shadow-md flex-shrink-0">
-                    <Plus size={20} />
-                  </button>
-                </div>
-              </div>
-            )) : <p className="text-md text-center text-gray-500 dark:text-gray-400 py-4">Hareket bulunamadı.</p>}
-          </div>
-        )}
+        <button onClick={addManualExercise} className="w-full flex items-center justify-center gap-2 px-3 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl text-base font-semibold hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200 ease-in-out active:scale-95 shadow-md">
+          <Plus size={20} /> Manuel Ekle
+        </button>
       </div>
-      
-      <div className="space-y-6">
-        {workoutExercises.length > 0 && <h3 className="font-semibold text-lg text-gray-800 dark:text-gray-100 mt-4">Antrenman Listesi</h3>}
-        {workoutExercises.map((exercise) => {
-          const libraryExercise = allLibraryExercises.find(libEx => libEx.name.toLowerCase() === exercise.name.toLowerCase());
-          const imageUrl = getImageUrl(libraryExercise?.gifUrl);
-          const previousExercise = getPreviousExerciseData(exercise.name);
-          
-          return (
-            <div key={exercise.id} className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-lg border border-gray-100 dark:border-gray-700">
-              <div className="flex items-center gap-3 mb-4">
-                <div 
-                  className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700 flex-shrink-0 cursor-pointer shadow-sm"
-                  onClick={() => handleImageClick(imageUrl)}
-                >
-                  <img src={imageUrl} alt={exercise.name} className="w-full h-full object-cover" />
+      <div className="relative">
+        <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" />
+        <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Veya kütüphaneden hareket ara..." className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 text-base" />
+      </div>
+      {loading ? (
+        <div className="flex items-center justify-center py-6"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>
+      ) : searchQuery.trim() && (
+        <div className="space-y-3 max-h-[40vh] overflow-y-auto p-1 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
+          {filteredLibraryExercises.length > 0 ? filteredLibraryExercises.map(exercise => (
+            <div key={exercise.id} className="bg-gray-50 dark:bg-gray-700 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-600 hover:shadow-md transition-shadow transform hover:scale-[1.01] active:scale-[0.99]">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-600 flex-shrink-0 cursor-pointer shadow-sm" onClick={() => handleImageClick(getImageUrl(exercise.gifUrl))}>
+                  <img src={getImageUrl(exercise.gifUrl)} alt={exercise.name} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.src = 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop'; }}/>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <input 
-                    type="text" 
-                    value={exercise.name} 
-                    onChange={(e) => updateExerciseName(exercise.id, e.target.value)} 
-                    placeholder="Hareket Adı" 
-                    className="w-full p-0 border-none bg-transparent text-lg font-semibold text-gray-800 dark:text-gray-200 focus:ring-0" 
-                  />
+                  <h3 className="font-semibold text-base text-gray-800 dark:text-gray-200 truncate">{exercise.name}</h3>
                 </div>
-                <button onClick={() => removeWorkoutExercise(exercise.id)} className="p-2 text-gray-400 hover:text-red-500 rounded-lg transition-colors active:scale-95">
-                  <Trash2 size={20} />
+                <button onClick={() => handleAddExerciseToWorkout(exercise)} className="p-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all duration-200 ease-in-out active:scale-95 shadow-md flex-shrink-0">
+                  <Plus size={20} />
                 </button>
               </div>
+            </div>
+          )) : <p className="text-md text-center text-gray-500 dark:text-gray-400 py-4">Hareket bulunamadı.</p>}
+        </div>
+      )}
+    </div>
+  );
 
-              <div className="space-y-2">
-                <div className="grid grid-cols-[30px,1fr,80px,80px,30px] gap-2 text-sm font-medium text-gray-500 dark:text-gray-400 px-1 text-center">
-                  <span>Set</span>
-                  <span>Önceki</span>
-                  <span>Kg</span>
-                  <span>Tekrar</span>
-                  <span></span>
-                </div>
-                {exercise.sets.map((set, setIndex) => {
-                  const previousSet = previousExercise?.sets[setIndex];
-                  const previousSetDisplay = previousSet ? `${previousSet.weight} kg x ${previousSet.reps}` : '-';
-                  
-                  return (
-                    <div key={setIndex} className="grid grid-cols-[30px,1fr,80px,80px,30px] gap-2 items-center">
-                      <span className="text-center font-medium text-gray-600 dark:text-gray-300 text-base">{setIndex + 1}</span>
-                      <div className="text-center text-sm font-medium text-gray-500 dark:text-gray-400 h-full flex items-center justify-center">
-                        {previousSetDisplay}
-                      </div>
-                      <input 
-                        type="number" 
-                        inputMode="decimal" 
-                        value={set.weight || ''} 
-                        onChange={(e) => updateSet(exercise.id, setIndex, 'weight', parseFloat(e.target.value) || 0)} 
-                        placeholder="0" 
-                        step="0.5" 
-                        className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg text-center focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-base" 
-                      />
-                      <input 
-                        type="number" 
-                        inputMode="numeric" 
-                        value={set.reps || ''} 
-                        onChange={(e) => updateSet(exercise.id, setIndex, 'reps', parseInt(e.target.value) || 0)} 
-                        placeholder="0" 
-                        className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg text-center focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-base" 
-                      />
-                      <button onClick={() => removeSet(exercise.id, setIndex)} className="text-gray-400 hover:text-red-500 m-auto p-1 rounded-md transition-colors active:scale-95">
-                        <Trash2 size={18}/>
-                      </button>
-                    </div>
-                  );
-                })}
+  const WorkoutListSection = (
+    <div className="space-y-6">
+      {workoutExercises.length > 0 && <h3 className="font-semibold text-lg text-gray-800 dark:text-gray-100">Antrenman Listesi</h3>}
+      {workoutExercises.map((exercise) => {
+        const libraryExercise = allLibraryExercises.find(libEx => libEx.name.toLowerCase() === exercise.name.toLowerCase());
+        const imageUrl = getImageUrl(libraryExercise?.gifUrl);
+        const previousExercise = getPreviousExerciseData(exercise.name);
+        const isEditable = exercise.id.startsWith('manual-');
+        
+        return (
+          <div key={exercise.id} className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-lg border border-gray-100 dark:border-gray-700">
+            {/* Egzersiz Başlığı */}
+            <div className="flex items-center gap-3 mb-4">
+              <div 
+                className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700 flex-shrink-0 cursor-pointer shadow-sm"
+                onClick={() => handleImageClick(imageUrl)}
+              >
+                <img src={imageUrl} alt={exercise.name} className="w-full h-full object-cover" />
               </div>
-              <button onClick={() => addSet(exercise.id)} className="w-full mt-4 p-2 text-blue-600 border-2 border-blue-200 dark:border-blue-800 border-dashed rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/50 transition-colors active:scale-95 text-base font-medium">
-                + Set Ekle
+              <div className="flex-1 min-w-0">
+                <input 
+                  type="text" 
+                  value={exercise.name} 
+                  onChange={(e) => updateExerciseName(exercise.id, e.target.value)} 
+                  placeholder="Hareket Adı Girin" 
+                  readOnly={!isEditable}
+                  className={`w-full p-0 border-none bg-transparent text-lg font-semibold text-gray-800 dark:text-gray-200 focus:ring-0 ${!isEditable ? 'cursor-default' : 'cursor-text'}`}
+                />
+              </div>
+              <button onClick={() => removeWorkoutExercise(exercise.id)} className="p-2 text-gray-400 hover:text-red-500 rounded-lg transition-colors active:scale-95">
+                <Trash2 size={20} />
               </button>
             </div>
-          );
-        })}
-      </div>
 
+            {/* Setler */}
+            <div className="space-y-2">
+              <div className="grid grid-cols-[30px,1fr,80px,80px,30px] gap-2 text-sm font-medium text-gray-500 dark:text-gray-400 px-1 text-center">
+                <span>Set</span>
+                <span>Önceki</span>
+                <span>Kg</span>
+                <span>Tekrar</span>
+                <span></span>
+              </div>
+              {exercise.sets.map((set, setIndex) => {
+                const previousSet = previousExercise?.sets[setIndex];
+                const previousSetDisplay = previousSet ? `${previousSet.weight} kg x ${previousSet.reps}` : '-';
+                
+                return (
+                  <div key={setIndex} className="grid grid-cols-[30px,1fr,80px,80px,30px] gap-2 items-center">
+                    <span className="text-center font-medium text-gray-600 dark:text-gray-300 text-base">{setIndex + 1}</span>
+                    <div className="text-center text-sm font-medium text-gray-500 dark:text-gray-400 h-full flex items-center justify-center">
+                      {previousSetDisplay}
+                    </div>
+                    <input 
+                      type="number" 
+                      inputMode="decimal" 
+                      value={set.weight || ''} 
+                      onChange={(e) => updateSet(exercise.id, setIndex, 'weight', parseFloat(e.target.value) || 0)} 
+                      placeholder="0" 
+                      step="0.5" 
+                      className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg text-center focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-base" 
+                    />
+                    <input 
+                      type="number" 
+                      inputMode="numeric" 
+                      value={set.reps || ''} 
+                      onChange={(e) => updateSet(exercise.id, setIndex, 'reps', parseInt(e.target.value) || 0)} 
+                      placeholder="0" 
+                      className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg text-center focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-base" 
+                    />
+                    <button onClick={() => removeSet(exercise.id, setIndex)} className="text-gray-400 hover:text-red-500 m-auto p-1 rounded-md transition-colors active:scale-95">
+                      <Trash2 size={18}/>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+            <button onClick={() => addSet(exercise.id)} className="w-full mt-4 p-2 text-blue-600 border-2 border-blue-200 dark:border-blue-800 border-dashed rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/50 transition-colors active:scale-95 text-base font-medium">
+              + Set Ekle
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  return (
+    <div className="p-4 space-y-4 pb-36">
+      <div className="flex items-center justify-between mb-2">
+          <button
+              onClick={onCancel}
+              className="p-2 text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+          >
+              <ArrowLeft size={24} />
+          </button>
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">
+            {format(new Date(date), 'dd MMMM yyyy', { locale: tr })}
+          </h2>
+          <div className="w-10 h-10" /> {/* Başlığı ortalamak için boşluk */}
+      </div>
+      
+      {addExerciseSectionPosition === 'top' && AddExerciseSection}
+      
+      {WorkoutListSection}
+
+      {addExerciseSectionPosition === 'bottom' && AddExerciseSection}
+      
+
+      {/* Kaydetme ve İptal Butonları */}
       <div className="fixed bottom-24 left-0 right-0 z-10 border-t border-gray-200 bg-white/90 px-4 py-2 backdrop-blur-sm dark:border-gray-700 dark:bg-gray-800/90">
         <div className="mx-auto flex max-w-md gap-3">
           <button onClick={onCancel} className="flex-1 rounded-xl border border-gray-300 py-2 px-6 text-base font-medium text-gray-800 shadow-md transition-all duration-200 ease-in-out hover:bg-gray-100 active:scale-95 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
@@ -331,6 +353,7 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
         </div>
       </div>
 
+      {/* Büyük Görsel Modalı */}
       {showLargeImage && currentLargeImageUrl && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4" onClick={closeLargeImage}>
           <div className="relative bg-white dark:bg-gray-800 rounded-2xl p-3 max-w-full max-h-full overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
