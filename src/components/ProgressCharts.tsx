@@ -51,11 +51,11 @@ const mapToMajorGroup = (bodyPart: string): string => {
     const lowerCaseBodyPart = bodyPart.toLowerCase();
 
     if (['chest'].includes(lowerCaseBodyPart)) return 'Göğüs';
-    if (['back', 'lats'].includes(lowerCaseBodyPart)) return 'Sırt';
-    if (['shoulders'].includes(lowerCaseBodyPart)) return 'Omuz';
-    if (['upper arms', 'lower arms', 'biceps'].includes(lowerCaseBodyPart)) return 'Ön Kol';
+    if (['back', 'lats', 'middle back','lower back'].includes(lowerCaseBodyPart)) return 'Sırt';
+    if (['shoulders','traps'].includes(lowerCaseBodyPart)) return 'Omuz';
+    if (['upper arms', 'lower arms', 'biceps','forearms'].includes(lowerCaseBodyPart)) return 'Ön Kol';
     if (['triceps'].includes(lowerCaseBodyPart)) return 'Arka Kol';
-    if (['upper legs', 'lower legs', 'quadriceps', 'hamstrings', 'glutes'].includes(lowerCaseBodyPart)) return 'Bacak';
+    if (['upper legs', 'lower legs', 'quadriceps', 'hamstrings', 'glutes','calves','abductors','adductors'].includes(lowerCaseBodyPart)) return 'Bacak';
     if (['waist', 'abdominals'].includes(lowerCaseBodyPart)) return 'Karın';
     
     return 'Diğer';
