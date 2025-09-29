@@ -74,13 +74,36 @@ const CreateRoutine: React.FC<CreateRoutineProps> = ({ existingRoutine, onSaveRo
   const [selectedExercises, setSelectedExercises] = useState<{ id: string; name: string; bodyPart?: string }[]>([]);
   const [manualExerciseName, setManualExerciseName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  
+  const selectedExerciseNames = useMemo(() => 
+    new Set(selectedExercises.map(ex => ex.name.toLowerCase())),
+    [selectedExercises]
+  );
 
-  const favoriteLibraryExercises = useMemo(() => {
-    const selectedExerciseNames = new Set(selectedExercises.map(ex => ex.name.toLowerCase()));
-    return allLibraryExercises
-      .filter(ex => favoriteExercises.includes(ex.id))
-      .filter(ex => !selectedExerciseNames.has(ex.name.toLowerCase()));
-  }, [allLibraryExercises, favoriteExercises, selectedExercises]);
+  const [favoriteLibraryExercises, otherLibraryExercises] = useMemo(() => {
+    const favorites: LibraryExercise[] = [];
+    const others: LibraryExercise[] = [];
+    
+    allLibraryExercises.forEach(ex => {
+      if (!selectedExerciseNames.has(ex.name.toLowerCase())) {
+        if (favoriteExercises.includes(ex.id)) {
+          favorites.push(ex);
+        } else {
+          others.push(ex);
+        }
+      }
+    });
+    
+    return [favorites, others];
+  }, [allLibraryExercises, favoriteExercises, selectedExerciseNames]);
+
+  const searchedExercises = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    return allLibraryExercises.filter(ex => 
+      !selectedExerciseNames.has(ex.name.toLowerCase()) &&
+      ex.name.toLowerCase().includes(searchQuery.trim().toLowerCase())
+    );
+  }, [searchQuery, allLibraryExercises, selectedExerciseNames]);
 
 
   const sensors = useSensors(
@@ -101,22 +124,6 @@ const CreateRoutine: React.FC<CreateRoutineProps> = ({ existingRoutine, onSaveRo
       setSelectedExercises(initialExercises);
     }
   }, [existingRoutine, allLibraryExercises]);
-
-  const filteredLibraryExercises = useMemo(() => {
-    const selectedExerciseNames = new Set(selectedExercises.map(ex => ex.name.toLowerCase()));
-    
-    let exercises = allLibraryExercises.filter(
-      libEx => !selectedExerciseNames.has(libEx.name.toLowerCase())
-    );
-
-    if (searchQuery.trim()) {
-      exercises = exercises.filter(ex =>
-        ex.name.toLowerCase().includes(searchQuery.trim().toLowerCase())
-      );
-    }
-    
-    return exercises;
-  }, [searchQuery, allLibraryExercises, selectedExercises]);
 
   const handleAddExerciseFromLibrary = (exercise: LibraryExercise) => {
     if (!selectedExercises.find(e => e.name.toLowerCase() === exercise.name.toLowerCase())) {
@@ -171,6 +178,16 @@ const CreateRoutine: React.FC<CreateRoutineProps> = ({ existingRoutine, onSaveRo
   };
 
   const isSaveDisabled = !routineName.trim() || selectedExercises.length === 0;
+
+  const ExerciseListItem = ({ exercise, isFavorite = false, onClick }: { exercise: LibraryExercise, isFavorite?: boolean, onClick: (ex: LibraryExercise) => void }) => (
+    <button onClick={() => onClick(exercise)} className="w-full text-left p-4 flex items-center gap-4 hover:bg-system-background-tertiary transition-colors border-t border-system-separator">
+      <img src={getImageUrl(exercise.gifUrl)} alt={exercise.name} className="w-12 h-12 rounded-lg object-cover flex-shrink-0 bg-system-background-tertiary" />
+      <div className="flex-1 min-w-0">
+        <p className="font-medium text-system-label text-base truncate">{exercise.name}</p>
+      </div>
+      {isFavorite && <Star size={16} className="text-system-yellow fill-system-yellow flex-shrink-0" />}
+    </button>
+  );
 
   return (
     <div className="p-4 space-y-6">
@@ -253,24 +270,26 @@ const CreateRoutine: React.FC<CreateRoutineProps> = ({ existingRoutine, onSaveRo
           
           <div className="max-h-[50vh] overflow-y-auto scrollbar-thin">
             {searchQuery.trim() ? (
-              filteredLibraryExercises.length > 0 ? filteredLibraryExercises.map(exercise => (
-                <button key={exercise.id} onClick={() => handleAddExerciseFromLibrary(exercise)} className="w-full text-left p-4 hover:bg-system-background-tertiary transition-colors border-t border-system-separator">
-                    <div className="flex items-center gap-4">
-                      <img src={getImageUrl(exercise.gifUrl)} alt={exercise.name} className="w-12 h-12 rounded-lg object-cover flex-shrink-0 bg-system-background-tertiary" />
-                      <p className="flex-1 font-medium text-system-label text-base">{exercise.name}</p>
-                    </div>
-                </button>
+              searchedExercises.length > 0 ? searchedExercises.map(exercise => (
+                <ExerciseListItem key={exercise.id} exercise={exercise} onClick={handleAddExerciseFromLibrary} />
               )) : <p className="text-md text-center text-system-label-secondary py-10 px-4">Sonuç bulunamadı.</p>
             ) : (
-              favoriteLibraryExercises.length > 0 ? favoriteLibraryExercises.map(exercise => (
-                <button key={exercise.id} onClick={() => handleAddExerciseFromLibrary(exercise)} className="w-full text-left p-4 hover:bg-system-background-tertiary transition-colors border-t border-system-separator">
-                    <div className="flex items-center gap-4">
-                      <Star size={16} className="text-system-yellow flex-shrink-0" />
-                      <img src={getImageUrl(exercise.gifUrl)} alt={exercise.name} className="w-12 h-12 rounded-lg object-cover flex-shrink-0 bg-system-background-tertiary" />
-                      <p className="flex-1 font-medium text-system-label text-base">{exercise.name}</p>
+              <>
+                {favoriteLibraryExercises.length > 0 && (
+                    <div>
+                        <p className="text-system-label-secondary px-4 pt-4 pb-2 text-sm font-bold">FAVORİLER</p>
+                        {favoriteLibraryExercises.map(exercise => (
+                            <ExerciseListItem key={exercise.id} exercise={exercise} isFavorite onClick={handleAddExerciseFromLibrary} />
+                        ))}
                     </div>
-                </button>
-              )) : <p className="text-md text-center text-system-label-secondary py-10 px-4">Aramaya başlayın veya favorilerinize göz atın.</p>
+                )}
+                <div>
+                    <p className="text-system-label-secondary px-4 pt-4 pb-2 text-sm font-bold">TÜM HAREKETLER</p>
+                    {otherLibraryExercises.map(exercise => (
+                        <ExerciseListItem key={exercise.id} exercise={exercise} onClick={handleAddExerciseFromLibrary} />
+                    ))}
+                </div>
+              </>
             )}
           </div>
       </div>
