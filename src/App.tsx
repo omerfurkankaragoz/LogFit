@@ -1,7 +1,7 @@
 // src/App.tsx
 
 import React, { useState, useEffect } from 'react';
-import { Calendar, Dumbbell, BarChart3, BookOpen, User } from 'lucide-react';
+import { Calendar, Dumbbell, BarChart3, BookOpen, User, Radar } from 'lucide-react';
 import WorkoutCalendar from './components/WorkoutCalendar';
 import AddWorkout from './components/AddWorkout';
 import WorkoutDetails from './components/WorkoutDetails';
@@ -217,7 +217,7 @@ function App() {
   const renderBottomNav = () => {
     const navItems = [
       { view: 'calendar', icon: Calendar, label: 'Takvim' },
-      { view: 'routines', icon: Dumbbell, label: 'Rutinler' },
+      { view: 'routines', icon: Radar, label: 'Rutinler' },
       { view: 'library', icon: BookOpen, label: 'Kütüphane' },
       { view: 'progress', icon: BarChart3, label: 'İlerleme' },
       { view: 'profile', icon: User, label: 'Profil' },
