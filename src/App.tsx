@@ -1,7 +1,8 @@
 // src/App.tsx
 
 import React, { useState, useEffect } from 'react';
-import { Calendar, Dumbbell, BarChart3, BookOpen, User } from 'lucide-react';
+// DEĞİŞİKLİK: İkonlar güncellendi
+import { Calendar, Radar, LibraryBig, LineChart, User } from 'lucide-react'; 
 import WorkoutCalendar from './components/WorkoutCalendar';
 import AddWorkout from './components/AddWorkout';
 import WorkoutDetails from './components/WorkoutDetails';
@@ -209,11 +210,12 @@ function App() {
   };
 
   const renderBottomNav = () => {
+    // DEĞİŞİKLİK: navItems array'i yeni ikonlarla güncellendi
     const navItems = [
       { view: 'calendar', icon: Calendar, label: 'Takvim' },
-      { view: 'routines', icon: Dumbbell, label: 'Rutinler' },
-      { view: 'library', icon: BookOpen, label: 'Kütüphane' },
-      { view: 'progress', icon: BarChart3, label: 'İlerleme' },
+      { view: 'routines', icon: Radar, label: 'Rutinler' },
+      { view: 'library', icon: LibraryBig, label: 'Kütüphane' },
+      { view: 'progress', icon: LineChart, label: 'İlerleme' },
       { view: 'profile', icon: User, label: 'Profil' },
     ];
     return (
@@ -232,18 +234,10 @@ function App() {
 
   return (
     <div className="min-h-screen bg-system-background flex flex-col max-w-md mx-auto">
-      {/* DEĞİŞİKLİK: 
-        Sabit bir header alanı oluşturuyoruz. Bu alan, iOS'teki "safe area" boşluğunu dolduracak.
-        Arka plan rengi, uygulamanın ana arka planıyla aynı olacak.
-      */}
       <header className="sticky top-0 z-10 bg-system-background w-full">
         <div className="h-[env(safe-area-inset-top)]"></div>
       </header>
       
-      {/* DEĞİŞİKLİK: 
-        Ana içerik artık header'dan sonra başlıyor ve padding'e ihtiyacı yok.
-        flex-1 ve overflow-y-auto ile kendi içinde kaydırılabilir hale geliyor.
-      */}
       <main className="flex-1 overflow-y-auto pb-24">
         {renderContent()}
       </main>
@@ -254,4 +248,3 @@ function App() {
 }
 
 export default App;
-
