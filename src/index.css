@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 html, body {
-    /* overscroll-behavior-y: none; */
+    overscroll-behavior-y: none;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
