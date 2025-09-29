@@ -1,7 +1,7 @@
 // src/App.tsx
 
 import React, { useState, useEffect } from 'react';
-import { Calendar, Dumbbell, BarChart3, BookOpen, User, Radar, Library, LibraryBig, BarChart2Icon, LineChartIcon } from 'lucide-react';
+import { Calendar, User,Radar,LibraryBig,LineChartIcon } from 'lucide-react';
 import WorkoutCalendar from './components/WorkoutCalendar';
 import AddWorkout from './components/AddWorkout';
 import WorkoutDetails from './components/WorkoutDetails';
@@ -185,12 +185,6 @@ function App() {
   }
   if (!session) return <Auth />;
 
-  const renderHeader = () => {
-    return (
-      <header className="sticky top-0 z-20 h-[env(safe-area-inset-top)] bg-system-background-secondary/80 backdrop-blur-xl" />
-    );
-  };
-
   const renderContent = () => {
     switch (currentView) {
       case 'profile': return <Profile session={session} onLogout={handleLogout} />;
@@ -238,8 +232,10 @@ function App() {
 
   return (
     <div className="min-h-screen bg-system-background">
-      {renderHeader()}
-      <main className="max-w-md mx-auto pb-24">
+      {/* Header kaldırıldı. Bunun yerine main elementine üstten boşluk ekleniyor.
+        Bu, iOS'teki durum çubuğu ve çentik (safe area) ile doğru entegrasyonu sağlar.
+      */}
+      <main className="max-w-md mx-auto pb-24 pt-[env(safe-area-inset-top)]">
         {renderContent()}
       </main>
       {renderBottomNav()}
