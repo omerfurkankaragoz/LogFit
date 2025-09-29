@@ -9,7 +9,6 @@ import { Workout } from '../App';
 interface WorkoutCalendarProps {
   workouts: Workout[];
   onDateSelect: (date: string) => void;
-  // 5. MADDE İÇİN GÜNCELLENDİ: onStartWorkout prop'u
   onStartWorkout: () => void;
 }
 
@@ -23,7 +22,6 @@ const WorkoutCalendar: React.FC<WorkoutCalendarProps> = ({ workouts, onDateSelec
   const monthDays = eachDayOfInterval({ start: startOfCalendar, end: endOfCalendar });
   const workoutDates = new Set(workouts.map(w => w.date));
 
-  // O güne ait antrenman olup olmadığını kontrol etmek için mantık
   const todayStr = new Date().toISOString().split('T')[0];
   const workoutForToday = workouts.find(w => w.date === todayStr);
 
@@ -41,101 +39,102 @@ const WorkoutCalendar: React.FC<WorkoutCalendarProps> = ({ workouts, onDateSelec
   };
 
   return (
-    <div className="p-4">
-      {/* Ay navigasyonu */}
-      <div className="flex items-center justify-between mb-6">
-        <button
-          onClick={handlePrevMonth}
-          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
-        >
-          <ChevronLeft size={24} className="text-gray-800 dark:text-gray-200" />
-        </button>
-        <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 capitalize">
+    <div className="p-4 space-y-6">
+      {/* Ay Navigasyonu ve Başlık (Yeni Tasarım) */}
+      <div className="flex items-center justify-between pt-4">
+        <h1 className="text-3xl font-bold text-system-label capitalize">
           {format(currentMonth, 'MMMM yyyy', { locale: tr })}
-        </h2>
-        <button
-          onClick={handleNextMonth}
-          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
-        >
-          <ChevronRight size={24} className="text-gray-800 dark:text-gray-200" />
-        </button>
-      </div>
-
-      {/* Haftanın günleri */}
-      <div className="grid grid-cols-7 mb-2">
-        {['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'].map(day => (
-          <div key={day} className="text-center text-sm font-medium text-gray-500 dark:text-gray-400 py-2">
-            {day}
-          </div>
-        ))}
-      </div>
-
-      {/* Takvim günleri */}
-      <div className="grid grid-cols-7 gap-1">
-        {monthDays.map(day => {
-          const dateStr = format(day, 'yyyy-MM-dd');
-          const hasWorkout = workoutDates.has(dateStr);
-          const isCurrentMonth = isSameMonth(day, currentMonth);
-          const isCurrentDay = isToday(day);
-
-          return (
+        </h1>
+        <div className="flex items-center gap-2">
             <button
-              key={dateStr}
-              onClick={() => handleDateClick(day)}
-              className={`
-                aspect-square p-2 rounded-xl text-lg font-medium transition-all duration-200 ease-in-out
-                flex flex-col items-center justify-center relative
-                ${isCurrentMonth ? 'text-gray-800 dark:text-gray-100' : 'text-gray-400 dark:text-gray-600'}
-                ${isCurrentDay ? 'bg-blue-100 dark:bg-blue-900 ring-2 ring-blue-500 dark:ring-blue-400' : ''}
-                ${!isCurrentDay && hasWorkout ? 'bg-green-100 dark:bg-green-900/50' : ''}
-                hover:bg-gray-100 dark:hover:bg-gray-700
-                active:scale-95
-              `}
+            onClick={handlePrevMonth}
+            className="p-2 bg-system-fill rounded-full text-system-label-secondary"
             >
-              <span>{format(day, 'd')}</span>
-              {hasWorkout && (
-                <div className="absolute bottom-1.5 w-1.5 h-1.5 bg-green-500 dark:bg-green-400 rounded-full"></div>
-              )}
+            <ChevronLeft size={20} />
             </button>
-          );
-        })}
+            <button
+            onClick={handleNextMonth}
+            className="p-2 bg-system-fill rounded-full text-system-label-secondary"
+            >
+            <ChevronRight size={20} />
+            </button>
+        </div>
       </div>
 
-      {/* 5. MADDE İÇİN GÜNCELLENDİ: "Antrenmana Başla" butonu */}
-      <div className="mt-8">
+      {/* Takvim Grid'i (Eski Stil + Yeni Renkler) */}
+      <div className="bg-system-background-secondary rounded-xl p-4">
+        <div className="grid grid-cols-7 mb-2">
+          {['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'].map(day => (
+            <div key={day} className="text-center text-xs font-semibold text-system-label-secondary py-2">
+              {day}
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-7 gap-1">
+          {monthDays.map(day => {
+            const dateStr = format(day, 'yyyy-MM-dd');
+            const hasWorkout = workoutDates.has(dateStr);
+            const isCurrentMonth = isSameMonth(day, currentMonth);
+            const isCurrentDay = isToday(day);
+
+            return (
+              <button
+                key={dateStr}
+                onClick={() => handleDateClick(day)}
+                className={`
+                  aspect-square p-2 rounded-xl text-lg font-medium transition-all duration-200 ease-in-out
+                  flex flex-col items-center justify-center relative
+                  ${isCurrentMonth ? 'text-system-label' : 'text-system-label-quaternary'}
+                  ${isCurrentDay ? 'bg-system-fill ring-2 ring-system-blue' : ''}
+                  ${!isCurrentDay && hasWorkout ? 'bg-system-green/20' : ''}
+                  hover:bg-system-fill
+                  active:scale-95
+                `}
+              >
+                <span>{format(day, 'd')}</span>
+                {hasWorkout && (
+                  <div className="absolute bottom-1.5 w-1.5 h-1.5 bg-system-green rounded-full"></div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Antrenmana Başla Butonu (Yeni Tasarım) */}
+      <div className="px-4">
         <button
           onClick={onStartWorkout}
-          className="w-full flex items-center justify-center gap-3 py-4 px-6 bg-blue-600 text-white rounded-2xl font-semibold text-lg shadow-lg hover:bg-blue-700 transition-all duration-300 ease-in-out active:scale-95 transform hover:-translate-y-1"
+          className="w-full flex items-center justify-center gap-3 py-3 px-6 bg-system-blue text-white rounded-xl font-semibold text-lg shadow-lg hover:opacity-90 transition-opacity active:scale-95"
         >
           <Dumbbell size={22} />
-          {/* Buton metni o güne ait antrenman olup olmamasına göre değişir */}
           {workoutForToday ? 'Antrenmana Devam Et' : 'Antrenmana Başla'}
         </button>
       </div>
 
-      {/* İstatistikler */}
-      <div className="mt-6 bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
-        <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-3">Bu Ayın Özeti</h3>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-              {workouts.filter(w => 
-                format(parseISO(w.date), 'yyyy-MM') === format(currentMonth, 'yyyy-MM')
-              ).length}
+      {/* İstatistikler Kartı (Yeni Tasarım) */}
+      <div className="bg-system-background-secondary rounded-xl p-4">
+        <h2 className="font-semibold text-system-label mb-3">Bu Ayın Özeti</h2>
+        <div className="grid grid-cols-2 gap-px bg-system-separator rounded-lg overflow-hidden">
+            <div className="text-center bg-system-background-secondary p-4">
+                <div className="text-2xl font-bold text-system-blue">
+                {workouts.filter(w => 
+                    format(parseISO(w.date), 'yyyy-MM') === format(currentMonth, 'yyyy-MM')
+                ).length}
+                </div>
+                <div className="text-sm text-system-label-secondary">Toplam Antrenman</div>
             </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">Toplam Antrenman</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-orange-500 dark:text-orange-400">
-              {workouts.filter(w => 
-                format(parseISO(w.date), 'yyyy-MM') === format(currentMonth, 'yyyy-MM')
-              ).reduce((total, workout) => 
-                total + workout.exercises.reduce((exTotal, exercise) => 
-                  exTotal + exercise.sets.length, 0), 0
-              )}
+            <div className="text-center bg-system-background-secondary p-4">
+                <div className="text-2xl font-bold text-system-orange">
+                {workouts.filter(w => 
+                    format(parseISO(w.date), 'yyyy-MM') === format(currentMonth, 'yyyy-MM')
+                ).reduce((total, workout) => 
+                    total + workout.exercises.reduce((exTotal, exercise) => 
+                    exTotal + exercise.sets.length, 0), 0
+                )}
+                </div>
+                <div className="text-sm text-system-label-secondary">Toplam Set</div>
             </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">Toplam Set</div>
-          </div>
         </div>
       </div>
     </div>

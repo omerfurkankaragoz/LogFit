@@ -1,7 +1,8 @@
+// src/components/WorkoutDetails.tsx
 import React, { useState } from 'react';
-import { format, parseISO, subDays } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { Edit, Trash2, TrendingUp, Calendar } from 'lucide-react';
+import { Edit, Trash2, TrendingUp, Calendar as CalendarIcon, ArrowLeft } from 'lucide-react';
 import { Workout, Exercise } from '../App';
 
 interface WorkoutDetailsProps {
@@ -10,7 +11,8 @@ interface WorkoutDetailsProps {
   workouts: Workout[];
   onEdit: () => void;
   onDelete: (id: string) => void;
-  onUpdate: (workoutId: string, updatedWorkout: Omit<Workout, 'id'>) => void;
+  // Geri dönme işlevi için onCancel prop'u ekleyelim
+  onCancel: () => void;
 }
 
 const WorkoutDetails: React.FC<WorkoutDetailsProps> = ({
@@ -19,7 +21,7 @@ const WorkoutDetails: React.FC<WorkoutDetailsProps> = ({
   workouts,
   onEdit,
   onDelete,
-  onUpdate
+  onCancel
 }) => {
   const [showComparison, setShowComparison] = useState(false);
 
@@ -50,29 +52,31 @@ const WorkoutDetails: React.FC<WorkoutDetailsProps> = ({
     return exercise.sets.reduce((total, set) => total + (set.reps * set.weight), 0);
   };
 
-  const getWorkoutStats = (workout: Workout) => {
-    const exercisesWithData = workout.exercises.filter(ex => ex.sets.length > 0);
+  const getWorkoutStats = (w: Workout) => {
+    const exercisesWithData = w.exercises.filter(ex => ex.sets.length > 0);
     const totalSets = exercisesWithData.reduce((total, ex) => total + ex.sets.length, 0);
     const totalVolume = exercisesWithData.reduce((total, ex) => total + getTotalVolume(ex), 0);
     const exerciseCount = exercisesWithData.length;
-
     return { totalSets, totalVolume, exerciseCount };
   };
 
+  // Eğer o gün antrenman yoksa gösterilecek ekran
   if (!workout) {
     return (
       <div className="p-4">
-        <div className="text-center py-8">
-          <Calendar size={48} className="mx-auto text-gray-400 dark:text-gray-500 mb-4" />
-          <h3 className="text-lg font-medium text-gray-600 dark:text-gray-400 mb-2">
-            Bu tarihte antrenman yok
-          </h3>
-          <p className="text-gray-500 dark:text-gray-500 mb-6">
-            {formatDate(date)} tarihinde henüz antrenman kaydı bulunmuyor.
+        <div className="flex justify-between items-center pt-4">
+            <button onClick={onCancel} className="text-system-blue text-lg">Geri</button>
+            <div className="w-10"></div> {/* Başlığı ortalamak için */}
+        </div>
+        <div className="text-center py-16 px-4 bg-system-background-secondary rounded-xl mt-6">
+          <CalendarIcon size={40} className="mx-auto text-system-label-tertiary mb-4" />
+          <h3 className="text-lg font-semibold text-system-label mb-1">Antrenman Yok</h3>
+          <p className="text-system-label-secondary text-sm mb-6">
+            {formatDate(date)} tarihinde kayıtlı bir antrenman bulunmuyor.
           </p>
           <button
             onClick={onEdit}
-            className="bg-blue-600 text-white py-2 px-6 rounded-lg hover:bg-blue-700 transition-colors"
+            className="bg-system-blue text-white py-2 px-5 rounded-lg font-semibold"
           >
             Antrenman Ekle
           </button>
@@ -84,20 +88,25 @@ const WorkoutDetails: React.FC<WorkoutDetailsProps> = ({
   const stats = getWorkoutStats(workout);
   const exercisesToShow = workout.exercises.filter(ex => ex.sets && ex.sets.length > 0);
 
+  // Antrenman var ama içi boşsa gösterilecek ekran
   if (exercisesToShow.length === 0) {
     return (
         <div className="p-4">
-             <div className="text-center py-8">
-                <Calendar size={48} className="mx-auto text-gray-400 dark:text-gray-500 mb-4" />
-                <h3 className="text-lg font-medium text-gray-600 dark:text-gray-400 mb-2">
+            <div className="flex justify-between items-center pt-4">
+                <button onClick={onCancel} className="text-system-blue text-lg">Geri</button>
+                <div className="w-10"></div>
+            </div>
+            <div className="text-center py-16 px-4 bg-system-background-secondary rounded-xl mt-6">
+                <CalendarIcon size={40} className="mx-auto text-system-label-tertiary mb-4" />
+                <h3 className="text-lg font-semibold text-system-label mb-1">
                     Henüz Veri Girilmedi
                 </h3>
-                <p className="text-gray-500 dark:text-gray-500 mb-6">
-                    {formatDate(date)} antrenmanı için planlanmış hareketler var, ancak henüz set/tekrar bilgisi girilmemiş.
+                <p className="text-system-label-secondary text-sm mb-6">
+                    Bu antrenmanda henüz set bilgisi girilmiş bir hareket yok.
                 </p>
                 <button
                     onClick={onEdit}
-                    className="bg-blue-600 text-white py-2 px-6 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 mx-auto"
+                    className="bg-system-blue text-white py-2 px-5 rounded-lg font-semibold flex items-center gap-2 mx-auto"
                 >
                     <Edit size={18} /> Antrenmana Devam Et
                 </button>
@@ -107,65 +116,54 @@ const WorkoutDetails: React.FC<WorkoutDetailsProps> = ({
   }
 
   return (
-    <div className="p-4">
-      {/* Başlık ve tarih */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200">
-            {formatDate(date)}
-          </h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            {stats.exerciseCount} hareket • {stats.totalSets} set
-          </p>
-        </div>
+    <div className="p-4 space-y-6">
+      {/* Sayfa Başlığı ve Butonlar */}
+      <div className="flex justify-between items-center pt-4">
+        <button onClick={onCancel} className="text-system-blue text-lg p-2 -ml-2">
+            <ArrowLeft size={24} />
+        </button>
+        <h1 className="text-xl font-bold text-system-label capitalize">
+          {formatDate(date)}
+        </h1>
         <div className="flex gap-2">
-          <button
+            <button onClick={onEdit} className="p-2 bg-system-fill rounded-full text-system-blue"> <Edit size={20} /> </button>
+            <button onClick={() => { if (confirm('Bu antrenmanı silmek istediğinizden emin misiniz?')) { onDelete(workout.id); } }} className="p-2 bg-system-fill rounded-full text-system-red"> <Trash2 size={20} /> </button>
+        </div>
+      </div>
+
+      {/* İstatistikler Kartı */}
+      <div className="bg-system-background-secondary rounded-xl p-4">
+        <h2 className="font-semibold text-system-label mb-3">Genel İstatistikler</h2>
+        <div className="grid grid-cols-3 gap-4">
+          <div className="text-center">
+            <div className="text-2xl font-bold text-system-blue">{stats.exerciseCount}</div>
+            <div className="text-xs text-system-label-secondary">Hareket</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-system-orange">{stats.totalSets}</div>
+            <div className="text-xs text-system-label-secondary">Toplam Set</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-system-green">{stats.totalVolume.toFixed(0)}</div>
+            <div className="text-xs text-system-label-secondary">Hacim (kg)</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Hareketler Başlığı ve Karşılaştırma Butonu */}
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-bold text-system-label">Hareketler</h2>
+        <button
             onClick={() => setShowComparison(!showComparison)}
-            className={`p-2 rounded-lg transition-colors ${
-              showComparison ? 'bg-orange-100 text-orange-600 dark:bg-orange-900 dark:text-orange-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
+            className={`p-2 rounded-full transition-colors ${
+              showComparison ? 'bg-system-orange text-white' : 'bg-system-fill text-system-orange'
             }`}
           >
             <TrendingUp size={20} />
           </button>
-          <button
-            onClick={onEdit}
-            className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-400 dark:hover:bg-blue-800 transition-colors"
-          >
-            <Edit size={20} />
-          </button>
-          <button
-            onClick={() => {
-              if (confirm('Bu antrenmanı silmek istediğinizden emin misiniz?')) {
-                onDelete(workout.id);
-              }
-            }}
-            className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 dark:bg-red-900 dark:text-red-400 dark:hover:bg-red-800 transition-colors"
-          >
-            <Trash2 size={20} />
-          </button>
-        </div>
       </div>
 
-      {/* İstatistikler */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm mb-6">
-        <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-3">Antrenman İstatistikleri</h3>
-        <div className="grid grid-cols-3 gap-4">
-          <div className="text-center">
-            <div className="text-xl font-bold text-blue-600 dark:text-blue-400">{stats.exerciseCount}</div>
-            <div className="text-xs text-gray-600 dark:text-gray-400">Hareket</div>
-          </div>
-          <div className="text-center">
-            <div className="text-xl font-bold text-orange-500 dark:text-orange-400">{stats.totalSets}</div>
-            <div className="text-xs text-gray-600 dark:text-gray-400">Toplam Set</div>
-          </div>
-          <div className="text-center">
-            <div className="text-xl font-bold text-green-600 dark:text-green-400">{stats.totalVolume.toFixed(0)}</div>
-            <div className="text-xs text-gray-600 dark:text-gray-400">Volüm (kg)</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Egzersizler */}
+      {/* Hareket Listesi */}
       <div className="space-y-4">
         {exercisesToShow.map((exercise) => {
           const previousData = getPreviousWorkout(exercise.name);
@@ -175,47 +173,44 @@ const WorkoutDetails: React.FC<WorkoutDetailsProps> = ({
           const previousVolume = previousData ? getTotalVolume(previousData.exercise) : 0;
 
           return (
-            <div key={exercise.id} className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold text-gray-800 dark:text-gray-200">{exercise.name}</h3>
+            <div key={exercise.id} className="bg-system-background-secondary rounded-xl overflow-hidden">
+              <div className="p-4">
+                <h3 className="font-semibold text-system-label">{exercise.name}</h3>
                 {showComparison && previousData && (
-                  <div className="text-xs text-gray-500 dark:text-gray-400">
-                    Son: {formatDate(previousData.workout.date)}
+                  <div className="text-xs text-system-label-secondary mt-1">
+                    Önceki: {formatDate(previousData.workout.date)}
                   </div>
                 )}
               </div>
-
-              {/* Set tablosu */}
-              <div className="overflow-hidden">
-                <div className="grid grid-cols-3 gap-2 text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 px-2">
+              
+              {/* Set Tablosu */}
+              <div className="px-4 pb-4">
+                <div className="grid grid-cols-3 gap-2 text-sm text-center font-medium text-system-label-secondary mb-2">
                   <span>Set</span>
                   <span>Tekrar</span>
                   <span>Kg</span>
                 </div>
-                
                 {exercise.sets.map((set, setIndex) => (
-                  <div key={setIndex} className="grid grid-cols-3 gap-2 py-2 px-2 bg-gray-50 dark:bg-gray-700 rounded-lg mb-1">
-                    <span className="text-center font-medium text-gray-700 dark:text-gray-300">
-                      {setIndex + 1}
-                    </span>
-                    <span className="text-center text-gray-800 dark:text-gray-200">{set.reps}</span>
-                    <span className="text-center font-medium text-gray-800 dark:text-gray-200">{set.weight} kg</span>
+                  <div key={setIndex} className="grid grid-cols-3 gap-2 py-2 text-center bg-system-background-tertiary rounded-lg mb-1">
+                    <span className="font-medium text-system-label-secondary">{setIndex + 1}</span>
+                    <span className="text-system-label">{set.reps}</span>
+                    <span className="font-medium text-system-label">{set.weight} kg</span>
                   </div>
                 ))}
               </div>
 
-              {/* Karşılaştırma */}
+              {/* Karşılaştırma Bölümü */}
               {showComparison && (
-                <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700">
+                <div className="border-t border-system-separator p-4">
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <div className="text-gray-600 dark:text-gray-400 mb-1">Maks Ağırlık</div>
+                      <div className="text-system-label-secondary mb-1">Maks Ağırlık</div>
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-gray-800 dark:text-gray-200">{currentMax} kg</span>
+                        <span className="font-medium text-system-label">{currentMax} kg</span>
                         {previousMax > 0 && (
-                          <span className={`text-xs ${
-                            currentMax > previousMax ? 'text-green-600 dark:text-green-400' : 
-                            currentMax < previousMax ? 'text-red-500 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'
+                          <span className={`text-xs font-semibold ${
+                            currentMax > previousMax ? 'text-system-green' : 
+                            currentMax < previousMax ? 'text-system-red' : 'text-system-label-secondary'
                           }`}>
                             ({currentMax > previousMax ? '+' : ''}{(currentMax - previousMax).toFixed(1)})
                           </span>
@@ -223,13 +218,13 @@ const WorkoutDetails: React.FC<WorkoutDetailsProps> = ({
                       </div>
                     </div>
                     <div>
-                      <div className="text-gray-600 dark:text-gray-400 mb-1">Toplam Volüm</div>
+                      <div className="text-system-label-secondary mb-1">Toplam Hacim</div>
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-gray-800 dark:text-gray-200">{currentVolume.toFixed(0)} kg</span>
+                        <span className="font-medium text-system-label">{currentVolume.toFixed(0)} kg</span>
                         {previousVolume > 0 && (
-                          <span className={`text-xs ${
-                            currentVolume > previousVolume ? 'text-green-600 dark:text-green-400' : 
-                            currentVolume < previousVolume ? 'text-red-500 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'
+                          <span className={`text-xs font-semibold ${
+                            currentVolume > previousVolume ? 'text-system-green' : 
+                            currentVolume < previousVolume ? 'text-system-red' : 'text-system-label-secondary'
                           }`}>
                             ({currentVolume > previousVolume ? '+' : ''}{(currentVolume - previousVolume).toFixed(0)})
                           </span>
@@ -237,19 +232,6 @@ const WorkoutDetails: React.FC<WorkoutDetailsProps> = ({
                       </div>
                     </div>
                   </div>
-                  
-                  {previousData && (
-                    <div className="mt-3 p-2 bg-blue-50 dark:bg-blue-900/50 rounded-lg">
-                      <div className="text-xs text-blue-700 dark:text-blue-300 font-medium mb-1">
-                        Önceki Antrenman ({formatDate(previousData.workout.date)})
-                      </div>
-                      <div className="text-xs text-blue-600 dark:text-blue-400">
-                        {previousData.exercise.sets.length} set • 
-                        Maks: {previousMax} kg • 
-                        Volüm: {previousVolume.toFixed(0)} kg
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
             </div>

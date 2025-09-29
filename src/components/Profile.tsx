@@ -2,13 +2,14 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../services/supabaseClient';
 import { Session } from '@supabase/supabase-js';
-import { Edit, Save, User } from 'lucide-react';
+import { Edit, Save, LogOut } from 'lucide-react';
 
 interface ProfileProps {
   session: Session;
+  onLogout: () => void;
 }
 
-const Profile: React.FC<ProfileProps> = ({ session }) => {
+const Profile: React.FC<ProfileProps> = ({ session, onLogout }) => {
   const [loading, setLoading] = useState(true);
   const [fullName, setFullName] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -39,16 +40,6 @@ const Profile: React.FC<ProfileProps> = ({ session }) => {
           setAge(data.age || '');
           setHeight(data.height || '');
           setWeight(data.weight || '');
-
-          if (!data.full_name || data.age === null || data.height === null || data.weight === null) {
-            setEditMode(true);
-          }
-        } else if (status === 406) {
-            setFullName('');
-            setAge('');
-            setHeight('');
-            setWeight('');
-            setEditMode(true);
         }
       } catch (error: any) {
         alert(error.message);
@@ -76,10 +67,7 @@ const Profile: React.FC<ProfileProps> = ({ session }) => {
 
       const { error } = await supabase.from('profiles').upsert(updates);
 
-      if (error) {
-        throw error;
-      }
-      alert('Profil güncellendi!');
+      if (error) throw error;
       setEditMode(false);
     } catch (error: any) {
       alert(error.message);
@@ -87,110 +75,72 @@ const Profile: React.FC<ProfileProps> = ({ session }) => {
       setLoading(false);
     }
   };
+  
+  const renderInfoRow = (label: string, value: string | number | null, unit: string = '') => (
+    <div className="flex justify-between items-center">
+        <span className="text-system-label-secondary">{label}</span>
+        <span className="text-system-label font-medium">{value || '-'} {value ? unit : ''}</span>
+    </div>
+  );
 
-  if (loading) {
-    return <div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div></div>;
-  }
+  const renderEditRow = (label: string, value: string | number, onChange: (val: any) => void, type: string = 'text', placeholder: string = '') => (
+    <div className="flex justify-between items-center">
+        <span className="text-system-label-secondary">{label}</span>
+        <input 
+            type={type}
+            value={value}
+            onChange={(e) => onChange(type === 'number' ? Number(e.target.value) : e.target.value)}
+            placeholder={placeholder}
+            className="w-1/2 bg-transparent text-system-label text-right font-medium focus:outline-none"
+        />
+    </div>
+  );
 
   return (
-    <>
-      <style>{`
-        .numeric-input-no-spinner::-webkit-outer-spin-button,
-        .numeric-input-no-spinner::-webkit-inner-spin-button {
-          -webkit-appearance: none;
-          margin: 0;
-        }
-        .numeric-input-no-spinner {
-          -moz-appearance: textfield;
-        }
-      `}</style>
-      <div className="p-4 space-y-6">
-        <div className="flex flex-col items-center space-y-4 pt-4">
+    <div className="p-4 space-y-6">
+        <h1 className="text-3xl font-bold text-system-label pt-4">Profil</h1>
+
+        {/* Profil Bilgileri Kartı */}
+        <div className="flex flex-col items-center space-y-3 p-6 bg-system-background-secondary rounded-xl">
           <img
-            src={avatarUrl || `https://ui-avatars.com/api/?name=${fullName || 'User'}&background=random`}
+            src={avatarUrl || `https://ui-avatars.com/api/?name=${fullName || 'U'}&background=2C2C2E&color=fff`}
             alt="Avatar"
-            className="w-28 h-28 rounded-full shadow-lg border-2 border-blue-500"
+            className="w-24 h-24 rounded-full shadow-lg"
           />
-          <h2 className="text-3xl font-bold text-gray-800 dark:text-gray-100">{fullName || 'Profilinizi Tamamlayın'}</h2>
-          <p className="text-md text-gray-500 dark:text-gray-400">{session.user.email || 'Misafir Kullanıcı'}</p>
+          <h2 className="text-2xl font-bold text-system-label">{fullName || 'Kullanıcı'}</h2>
+          <p className="text-md text-system-label-secondary">{session.user.email}</p>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-100 dark:border-gray-700">
-          <h3 className="font-semibold text-lg text-gray-800 dark:text-gray-100 mb-4">Kişisel Bilgiler</h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Tam Adınız</label>
-              {editMode ? (
-                <input 
-                  type="text" 
-                  value={fullName || ''}
-                  onChange={(e) => setFullName(e.target.value)} 
-                  placeholder="Adınız Soyadınız"
-                  className="w-full p-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              ) : (
-                <p className="text-lg font-medium text-gray-800 dark:text-gray-200 p-2">{fullName || '-'}</p>
-              )}
+        {/* Kişisel Bilgiler Kartı */}
+        <div className="bg-system-background-secondary rounded-xl divide-y divide-system-separator">
+            <div className="p-4 flex justify-between items-center">
+                <h2 className="text-xl font-bold text-system-label">Bilgilerim</h2>
+                <button onClick={editMode ? handleUpdateProfile : () => setEditMode(true)} className="text-system-blue text-lg">
+                    {editMode ? 'Kaydet' : 'Düzenle'}
+                </button>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Yaş</label>
-              {editMode ? (
-                <input 
-                  type="number" 
-                  inputMode="numeric" 
-                  value={age} 
-                  onChange={(e) => setAge(Number(e.target.value))} 
-                  className="numeric-input-no-spinner w-full p-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              ) : (
-                <p className="text-lg font-medium text-gray-800 dark:text-gray-200 p-2">{age || '-'}</p>
-              )}
+            <div className="p-4 space-y-4">
+                {editMode ? renderEditRow('Ad Soyad', fullName || '', setFullName, 'text', 'Ad Soyad') : renderInfoRow('Ad Soyad', fullName)}
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Boy (cm)</label>
-              {editMode ? (
-                <input 
-                  type="number" 
-                  inputMode="numeric" 
-                  value={height} 
-                  onChange={(e) => setHeight(Number(e.target.value))} 
-                  className="numeric-input-no-spinner w-full p-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              ) : (
-                <p className="text-lg font-medium text-gray-800 dark:text-gray-200 p-2">{height || '-'}</p>
-              )}
+             <div className="p-4 space-y-4">
+                {editMode ? renderEditRow('Yaş', age, setAge, 'number', 'Yaş') : renderInfoRow('Yaş', age)}
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Kilo (kg)</label>
-              {editMode ? (
-                <input 
-                  type="number" 
-                  inputMode="numeric" 
-                  value={weight} 
-                  onChange={(e) => setWeight(Number(e.target.value))} 
-                  className="numeric-input-no-spinner w-full p-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              ) : (
-                <p className="text-lg font-medium text-gray-800 dark:text-gray-200 p-2">{weight || '-'}</p>
-              )}
+             <div className="p-4 space-y-4">
+                {editMode ? renderEditRow('Boy', height, setHeight, 'number', 'cm') : renderInfoRow('Boy', height, 'cm')}
             </div>
-          </div>
+             <div className="p-4 space-y-4">
+                {editMode ? renderEditRow('Kilo', weight, setWeight, 'number', 'kg') : renderInfoRow('Kilo', weight, 'kg')}
+            </div>
         </div>
 
-        <div>
-          {editMode ? (
-            <button onClick={handleUpdateProfile} disabled={loading} className="w-full flex items-center justify-center gap-2 py-3 px-6 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all duration-200 ease-in-out active:scale-95 shadow-md">
-              <Save size={20} /> Kaydet
+        {/* Çıkış Yap Butonu */}
+        <div className="bg-system-background-secondary rounded-xl">
+            <button onClick={onLogout} className="w-full p-4 text-system-red text-center text-lg flex items-center justify-center gap-2">
+                <LogOut size={20} />
+                <span>Çıkış Yap</span>
             </button>
-          ) : (
-            <button onClick={() => setEditMode(true)} className="w-full flex items-center justify-center gap-2 py-3 px-6 bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200 rounded-xl hover:bg-gray-300 dark:hover:bg-gray-600 transition-all duration-200 ease-in-out active:scale-95 shadow-md">
-              <Edit size={20} /> Düzenle
-            </button>
-          )}
         </div>
-      </div>
-    </>
+    </div>
   );
 };
 

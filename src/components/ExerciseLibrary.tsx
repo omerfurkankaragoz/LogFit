@@ -1,7 +1,8 @@
 // src/components/ExerciseLibrary.tsx
-import React, { useState, useEffect } from 'react';
-import { Search, Filter, Plus, X, Star } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Search, Star, X, Filter } from 'lucide-react';
 import { Exercise, getBodyParts } from '../services/exerciseApi';
+import ExerciseDetailsModal from './ExerciseDetailsModal';
 
 const SUPABASE_PROJECT_URL = 'https://ekrhekungvoisfughwuz.supabase.co';
 const BUCKET_NAME = 'images';
@@ -13,29 +14,32 @@ interface ExerciseLibraryProps {
   onToggleFavorite: (exerciseId: string) => void;
 }
 
-const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({ onExerciseSelect, allExercises, favoriteExercises, onToggleFavorite }) => {
-  const [filteredExercises, setFilteredExercises] = useState<Exercise[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedBodyPart, setSelectedBodyPart] = useState('all');
-  const [showFilters, setShowFilters] = useState(false);
-  const [bodyParts, setBodyParts] = useState<string[]>([]);
+// Sadece Vücut Bölgelerini İngilizce ve standart formatta gösteren fonksiyon
+const formatBodyPartName = (bodyPart: string) => {
+    if (!bodyPart) return 'Other';
+    // Özel durumlar için
+    if (bodyPart === 'all') return 'Tümü';
+    if (bodyPart === 'favorites') return 'Favoriler';
+    // Gelen kelimelerin ilk harfini büyük yap
+    return bodyPart.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+};
 
-  const [showLargeImage, setShowLargeImage] = useState(false);
-  const [currentLargeImageUrl, setCurrentLargeImageUrl] = useState<string | null>(null);
+const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({ onExerciseSelect, allExercises, favoriteExercises, onToggleFavorite }) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
+  const [bodyParts, setBodyParts] = useState<string[]>([]);
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedBodyPart, setSelectedBodyPart] = useState('all');
 
   useEffect(() => {
     const fetchBodyPartsData = async () => {
-      setLoading(true);
       const parts = await getBodyParts();
       setBodyParts(parts);
-      setLoading(false);
     };
-
     fetchBodyPartsData();
   }, []);
 
-  useEffect(() => {
+  const filteredExercises = useMemo(() => {
     let exercises = [...allExercises];
     if (searchQuery.trim()) {
       exercises = exercises.filter(ex =>
@@ -51,14 +55,8 @@ const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({ onExerciseSelect, all
         );
       }
     }
-    setFilteredExercises(exercises);
+    return exercises;
   }, [searchQuery, selectedBodyPart, allExercises, favoriteExercises]);
-
-  const handleExerciseSelect = (exercise: Exercise) => {
-    if (confirm(`"${exercise.name}" hareketini bugünkü antrenmana eklemek istiyor musunuz?`)) {
-      onExerciseSelect(exercise);
-    }
-  };
   
   const getImageUrl = (gifPath: string) => {
     if (!gifPath) return 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop';
@@ -66,104 +64,79 @@ const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({ onExerciseSelect, all
     return `${SUPABASE_PROJECT_URL}/storage/v1/object/public/${BUCKET_NAME}/exercises/${imagePath}`;
   };
   
-  const getBodyPartName = (bodyPart: string) => {
-    if (!bodyPart) return '';
-    const names: { [key: string]: string } = { 'chest': 'Göğüs', 'back': 'Sırt', 'shoulders': 'Omuz', 'waist': 'Karın', 'cardio': 'Kardiyo', 'neck': 'Boyun', 'lower arms': 'Ön Kol', 'upper arms': 'Pazu/Arka Kol', 'lower legs': 'Alt Bacak', 'upper legs': 'Üst Bacak', 'abdominals': 'Karın' };
-    return names[bodyPart.toLowerCase()] || bodyPart.charAt(0).toUpperCase() + bodyPart.slice(1);
+  const handleAddExercise = (exercise: Exercise) => {
+    onExerciseSelect(exercise);
+    setSelectedExercise(null);
   };
 
-  const handleImageClick = (imageUrl: string) => {
-    setCurrentLargeImageUrl(imageUrl);
-    setShowLargeImage(true);
-  };
-
-  const closeLargeImage = () => {
-    setShowLargeImage(false);
-    setCurrentLargeImageUrl(null);
-  };
+  const handleSelectFilter = (part: string) => {
+      setSelectedBodyPart(part);
+      setShowFilters(false);
+  }
 
   return (
-    <div className="p-4">
-      <div className="space-y-4 mb-6">
-        <div className="relative">
-          <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" />
-          <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Hareket adı ara..." className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 text-base" />
-        </div>
-        <button onClick={() => setShowFilters(!showFilters)} className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-200 ease-in-out active:scale-95 text-sm font-medium ${showFilters ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'}`}>
-          <Filter size={16} /> Filtreler
-        </button>
-        {showFilters && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
-            <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-3 text-base">Vücut Bölgesi</h3>
-            <div className="flex flex-wrap gap-2">
-              <button onClick={() => setSelectedBodyPart('all')} className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors hover:scale-[1.03] active:scale-95 ${selectedBodyPart === 'all' ? 'bg-blue-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'}`}>Tümü</button>
-              <button onClick={() => setSelectedBodyPart('favorites')} className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors flex items-center gap-2 hover:scale-[1.03] active:scale-95 ${selectedBodyPart === 'favorites' ? 'bg-yellow-400 text-yellow-900 shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'}`}><Star size={16} />Favoriler</button>
-              {bodyParts.map(bodyPart => (<button key={bodyPart} onClick={() => setSelectedBodyPart(bodyPart)} className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors flex items-center gap-1 hover:scale-[1.03] active:scale-95 ${selectedBodyPart === bodyPart ? 'bg-blue-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'}`}>{getBodyPartName(bodyPart)}</button>))}
-            </div>
-          </div>
-        )}
-      </div>
-      {loading && (<div className="flex items-center justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div><span className="ml-3 text-gray-600 dark:text-gray-400">Yükleniyor...</span></div>)}
-      {!loading && (
-        <>
-          <div className="mb-4"><p className="text-sm text-gray-600 dark:text-gray-400">{filteredExercises.length} hareket bulundu</p></div>
-          <div className="space-y-3">
-            {filteredExercises.map(exercise => {
-              const isFavorited = favoriteExercises.includes(exercise.id);
-              return (
-                <div key={exercise.id} className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-lg border border-gray-100 dark:border-gray-700 hover:shadow-xl transform transition-all duration-200 ease-in-out hover:scale-[1.01]">
-                  <div className="flex items-center gap-4">
-                    <div className="w-20 h-20 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-700 flex-shrink-0 cursor-pointer shadow-sm"
-                         onClick={() => handleImageClick(getImageUrl(exercise.gifUrl))}>
-                      <img 
-                        src={getImageUrl(exercise.gifUrl)} 
-                        alt={exercise.name} 
-                        className="w-full h-full object-cover" 
-                        onError={(e) => { e.currentTarget.src = 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop'; }}
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-lg text-gray-800 dark:text-gray-200 truncate mb-1">{exercise.name}</h3>
-                      <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 px-3 py-1 rounded-full font-medium">{getBodyPartName(exercise.bodyPart)}</span>
-                          <span className="text-xs bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 px-3 py-1 rounded-full font-medium">{exercise.equipment}</span>
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                        <button onClick={() => handleExerciseSelect(exercise)} className="p-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all duration-200 ease-in-out active:scale-95 shadow-md flex-shrink-0">
-                            <Plus size={20} />
-                        </button>
-                        <button onClick={() => onToggleFavorite(exercise.id)} className="p-3 bg-gray-100 dark:bg-gray-700 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200 ease-in-out active:scale-95 shadow-md flex-shrink-0">
-                            <Star size={20} className={isFavorited ? 'text-yellow-400 fill-current' : 'text-gray-400'} />
-                        </button>
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </>
-      )}
+    <>
+      <div className="p-4 space-y-6">
+          <h1 className="text-3xl font-bold text-system-label pt-4">Kütüphane</h1>
 
-      {showLargeImage && currentLargeImageUrl && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4" onClick={closeLargeImage}>
-          <div className="relative bg-white dark:bg-gray-800 rounded-2xl p-3 max-w-full max-h-full overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <button
-              onClick={closeLargeImage}
-              className="absolute top-3 right-3 text-white bg-gray-800 dark:bg-gray-700 rounded-full p-2 hover:bg-gray-900 dark:hover:bg-gray-600 transition-colors z-10"
-            >
-              <X size={24} />
+          <div className="flex gap-2 items-center">
+            <div className="relative flex-grow">
+                <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-system-label-tertiary" />
+                <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Hareket adı ara..." className="w-full pl-10 pr-4 py-2 bg-system-background-tertiary text-system-label rounded-lg focus:outline-none focus:ring-2 focus:ring-system-blue" />
+            </div>
+            <button onClick={() => setShowFilters(prev => !prev)} className="p-2 bg-system-fill rounded-lg text-system-label">
+                <Filter size={20} />
             </button>
-            <img
-              src={currentLargeImageUrl}
-              alt="Büyük Egzersiz Görseli"
-              className="max-w-[80vw] max-h-[80vh] object-contain mx-auto rounded-xl"
-              onError={(e) => { e.currentTarget.src = 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=800'; }}
-            />
           </div>
+
+        {showFilters && (
+            <div className="bg-system-background-secondary rounded-xl p-4">
+                <h2 className="font-semibold text-system-label mb-3">Vücut Bölgesi</h2>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    <button onClick={() => handleSelectFilter('all')} className={`w-full py-2 rounded-lg text-sm font-semibold transition-colors ${selectedBodyPart === 'all' ? 'bg-system-blue text-white' : 'bg-system-fill text-system-label'}`}>Tümü</button>
+                    <button onClick={() => handleSelectFilter('favorites')} className={`w-full py-2 rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${selectedBodyPart === 'favorites' ? 'bg-system-blue text-white' : 'bg-system-fill text-system-label'}`}><Star size={16}/>Favoriler</button>
+                    {bodyParts.map(part => (
+                         <button key={part} onClick={() => handleSelectFilter(part)} className={`w-full py-2 rounded-lg text-sm font-semibold transition-colors ${selectedBodyPart === part ? 'bg-system-blue text-white' : 'bg-system-fill text-system-label'}`}>{formatBodyPartName(part)}</button>
+                    ))}
+                </div>
+            </div>
+        )}
+
+        <div className="bg-system-background-secondary rounded-xl divide-y divide-system-separator">
+            {filteredExercises.map(exercise => {
+                const isFavorited = favoriteExercises.includes(exercise.id);
+                return (
+                    <div key={exercise.id} className="p-4 flex items-center gap-4">
+                        <img 
+                            src={getImageUrl(exercise.gifUrl)} 
+                            alt={exercise.name} 
+                            className="w-16 h-16 rounded-lg object-cover bg-system-background-tertiary flex-shrink-0"
+                        />
+                        <div onClick={() => setSelectedExercise(exercise)} className="flex-1 min-w-0 cursor-pointer">
+                            <p className="font-semibold text-system-label truncate">{exercise.name}</p>
+                            <p className="text-sm text-system-label-secondary truncate">{formatBodyPartName(exercise.bodyPart)}</p>
+                        </div>
+                        <button 
+                            onClick={() => onToggleFavorite(exercise.id)} 
+                            className="p-3 text-system-label-secondary"
+                        >
+                            <Star className={`transition-all ${isFavorited ? 'fill-system-yellow text-system-yellow' : ''}`} />
+                        </button>
+                    </div>
+                );
+            })}
         </div>
+      </div>
+
+      {selectedExercise && (
+        <ExerciseDetailsModal 
+            exercise={selectedExercise}
+            onClose={() => setSelectedExercise(null)}
+            onAdd={handleAddExercise}
+            getImageUrl={getImageUrl}
+        />
       )}
-    </div>
+    </>
   );
 };
 

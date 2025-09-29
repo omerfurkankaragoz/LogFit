@@ -9,32 +9,26 @@ import {
 import { format, parseISO, subDays, subMonths, subYears, isAfter } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { Workout } from '../App';
+import { BarChart3 } from 'lucide-react';
 
 type TimeRange = 'week' | 'month' | 'year' | 'all';
 
 const CustomTooltip = ({ active, payload, label }: any) => {
-    const isDarkMode = document.documentElement.classList.contains('dark');
-    const tooltipBg = isDarkMode ? 'rgba(45, 55, 72, 0.9)' : 'rgba(255, 255, 255, 0.9)';
-    const tooltipText = isDarkMode ? '#E2E8F0' : '#374151';
-    const tooltipBorder = isDarkMode ? '#4A5568' : '#e5e7eb';
-
     if (active && payload && payload.length) {
-        // Radar grafik için tooltip
         if (payload[0].payload.subject) {
             const { subject, value } = payload[0].payload;
             return (
-                 <div style={{ backgroundColor: tooltipBg, backdropFilter: 'blur(5px)', border: `1px solid ${tooltipBorder}`, borderRadius: '0.75rem', padding: '0.75rem 1rem', boxShadow: '0 6px 12px -2px rgba(0, 0, 0, 0.1), 0 3px 7px -3px rgba(0, 0, 0, 0.1)' }}>
-                    <p style={{ color: payload[0].color, fontWeight: 'bold' }}>{subject}: {value.toFixed(0)} kg</p>
+                 <div className="bg-system-background-tertiary/80 backdrop-blur-md border border-system-separator rounded-lg p-3 shadow-lg">
+                    <p style={{ color: payload[0].color }} className="font-bold">{subject}: {value.toFixed(0)} kg</p>
                 </div>
             )
         }
         
-        // Diğer grafikler
         return (
-            <div style={{ backgroundColor: tooltipBg, backdropFilter: 'blur(5px)', border: `1px solid ${tooltipBorder}`, borderRadius: '0.75rem', padding: '0.75rem 1rem', boxShadow: '0 6px 12px -2px rgba(0, 0, 0, 0.1), 0 3px 7px -3px rgba(0, 0, 0, 0.1)' }}>
-                <p style={{ color: tooltipText, fontWeight: 'bold', marginBottom: '0.4rem' }}>{`Tarih: ${label}`}</p>
+            <div className="bg-system-background-tertiary/80 backdrop-blur-md border border-system-separator rounded-lg p-3 shadow-lg">
+                <p className="text-system-label-secondary font-bold mb-1">{`Tarih: ${label}`}</p>
                 {payload.map((pld: any, index: number) => (
-                    <p key={index} style={{ color: pld.color, fontWeight: 500, fontSize: '0.9rem' }}>
+                    <p key={index} style={{ color: pld.color }} className="font-medium text-sm">
                         {`${pld.name}: ${pld.value}${pld.unit || ''}`}
                     </p>
                 ))}
@@ -45,32 +39,31 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     return null;
 };
 
-// Detaylı kas gruplarını ana gruplara eşleyen fonksiyon (Sizin istediğiniz haliyle)
+// Sizin sağladığınız yeni liste ile güncellenmiş ve İngilizce'ye çevrilmiş fonksiyon
 const mapToMajorGroup = (bodyPart: string): string => {
-    if (!bodyPart) return 'Diğer';
+    if (!bodyPart) return 'Other';
     const lowerCaseBodyPart = bodyPart.toLowerCase();
-
-    if (['chest'].includes(lowerCaseBodyPart)) return 'Göğüs';
-    if (['back', 'lats', 'middle back','lower back'].includes(lowerCaseBodyPart)) return 'Sırt';
-    if (['shoulders','traps'].includes(lowerCaseBodyPart)) return 'Omuz';
-    if (['upper arms', 'lower arms', 'biceps','forearms'].includes(lowerCaseBodyPart)) return 'Ön Kol';
-    if (['triceps'].includes(lowerCaseBodyPart)) return 'Arka Kol';
-    if (['upper legs', 'lower legs', 'quadriceps', 'hamstrings', 'glutes','calves','abductors','adductors'].includes(lowerCaseBodyPart)) return 'Bacak';
-    if (['waist', 'abdominals'].includes(lowerCaseBodyPart)) return 'Karın';
     
-    return 'Diğer';
+    if (['chest'].includes(lowerCaseBodyPart)) return 'Chest';
+    if (['back', 'lats', 'middle back', 'lower back'].includes(lowerCaseBodyPart)) return 'Back';
+    if (['shoulders', 'traps'].includes(lowerCaseBodyPart)) return 'Shoulders';
+    if (['upper arms', 'lower arms', 'biceps', 'forearms'].includes(lowerCaseBodyPart)) return 'Biceps';
+    if (['triceps'].includes(lowerCaseBodyPart)) return 'Triceps';
+    if (['upper legs', 'lower legs', 'quadriceps', 'hamstrings', 'glutes', 'calves', 'abductors', 'adductors'].includes(lowerCaseBodyPart)) return 'Legs';
+    if (['waist', 'abdominals'].includes(lowerCaseBodyPart)) return 'Abs';
+    
+    return 'Other';
 };
 
 
 const ProgressCharts: React.FC<{ workouts: Workout[] }> = ({ workouts }) => {
   const [selectedExercise, setSelectedExercise] = useState<string>('');
   const [timeRange, setTimeRange] = useState<TimeRange>('all');
-  const isDarkMode = document.documentElement.classList.contains('dark');
 
   const chartStyles = {
-    gridColor: isDarkMode ? '#374151' : '#e5e7eb',
-    tickColor: isDarkMode ? '#A0AEC0' : '#6b7280',
-    axisLineColor: isDarkMode ? '#4A5568' : '#D1D5DB',
+    gridColor: 'rgba(84, 84, 88, 0.6)', 
+    tickColor: 'rgb(235 235 245 / 0.6)', 
+    axisLineColor: 'rgb(235 235 245 / 0.3)', 
   };
 
   const filteredWorkouts = useMemo(() => {
@@ -120,15 +113,14 @@ const ProgressCharts: React.FC<{ workouts: Workout[] }> = ({ workouts }) => {
   }, [filteredWorkouts]);
 
   const radarChartData = useMemo(() => {
-    // Sizin istediğiniz haliyle, Ön Kol/Arka Kol ayrımıyla
     const distribution: { [key: string]: number } = {
-        'Göğüs': 0, 'Sırt': 0, 'Omuz': 0, 'Arka Kol': 0,'Ön Kol': 0, 'Bacak': 0, 'Karın': 0
+        'Chest': 0, 'Back': 0, 'Shoulders': 0, 'Biceps': 0,'Triceps': 0, 'Legs': 0, 'Abs': 0
     };
 
     filteredWorkouts.forEach(workout => {
         workout.exercises.forEach(exercise => {
             const volume = exercise.sets.reduce((sum, set) => sum + (set.reps * set.weight), 0);
-            const majorGroup = mapToMajorGroup(exercise.bodyPart || 'Diğer');
+            const majorGroup = mapToMajorGroup(exercise.bodyPart || 'Other');
             if (distribution.hasOwnProperty(majorGroup)) {
                 distribution[majorGroup] += volume;
             }
@@ -147,18 +139,18 @@ const ProgressCharts: React.FC<{ workouts: Workout[] }> = ({ workouts }) => {
   
   const FilterButtons = () => {
       const ranges: { key: TimeRange; label: string }[] = [
-          { key: 'week', label: 'Haftalık' },
-          { key: 'month', label: 'Aylık' },
-          { key: 'year', label: 'Yıllık' },
+          { key: 'week', label: 'Hafta' },
+          { key: 'month', label: 'Ay' },
+          { key: 'year', label: 'Yıl' },
           { key: 'all', label: 'Tümü' },
       ];
       return (
-          <div className="bg-gray-100 dark:bg-gray-700/50 p-1 rounded-xl flex items-center justify-center space-x-1 mb-6">
+          <div className="bg-system-background-tertiary p-1 rounded-xl flex items-center justify-center space-x-1">
               {ranges.map(range => (
                   <button
                       key={range.key}
                       onClick={() => setTimeRange(range.key)}
-                      className={`w-full px-3 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${timeRange === range.key ? 'bg-white text-blue-600 shadow-md dark:bg-gray-800 dark:text-blue-400' : 'text-gray-600 hover:bg-gray-200/50 dark:text-gray-300 dark:hover:bg-gray-600/50'}`}>
+                      className={`w-full px-3 py-1.5 rounded-lg text-sm font-semibold transition-all duration-200 ${timeRange === range.key ? 'bg-system-fill-secondary shadow-md text-system-label' : 'text-system-label-secondary'}`}>
                       {range.label}
                   </button>
               ))}
@@ -167,54 +159,65 @@ const ProgressCharts: React.FC<{ workouts: Workout[] }> = ({ workouts }) => {
   };
 
   if (workouts.length === 0) {
-    return <div className="p-4"><div className="text-center py-12 bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700"><h3 className="text-xl font-medium text-gray-600 dark:text-gray-300 mb-2">Henüz veri yok</h3><p className="text-gray-500 dark:text-gray-400 text-md">Grafikleri görmek için önce antrenman kayıtları eklemelisiniz.</p></div></div>;
+    return (
+        <div className="p-4 text-center py-16">
+            <BarChart3 size={40} className="mx-auto text-system-label-tertiary mb-4" />
+            <h3 className="text-lg font-semibold text-system-label mb-1">Henüz Veri Yok</h3>
+            <p className="text-system-label-secondary text-sm">
+                Grafikleri görmek için önce antrenman kayıtları eklemelisiniz.
+            </p>
+        </div>
+    );
   }
 
   return (
     <div className="p-4 space-y-6">
+      <h1 className="text-3xl font-bold text-system-label pt-4">İlerleme</h1>
       <FilterButtons />
 
       {filteredWorkouts.length === 0 ? (
-          <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700">
-              <h3 className="text-xl font-medium text-gray-600 dark:text-gray-300 mb-2">Seçili Aralıkta Veri Yok</h3>
-              <p className="text-gray-500 dark:text-gray-400 text-md">Lütfen farklı bir zaman aralığı seçin veya yeni antrenman ekleyin.</p>
+          <div className="text-center py-16 px-4 bg-system-background-secondary rounded-xl">
+              <h3 className="text-xl font-medium text-system-label-secondary mb-2">Bu Aralıkta Veri Yok</h3>
+              <p className="text-system-label-tertiary text-md">Lütfen farklı bir zaman aralığı seçin.</p>
           </div>
       ) : (
         <>
-            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-100 dark:border-gray-700">
-                <h3 className="font-bold text-xl text-gray-800 dark:text-gray-100 mb-4">Genel İlerleme</h3>
+            <div className="bg-system-background-secondary rounded-2xl p-4 space-y-6">
+                <h2 className="font-bold text-xl text-system-label">Genel İlerleme</h2>
                 
-                {/* DÜZELTME BURADA: Grafiklerin sırası değiştirildi */}
                 {radarChartData.hasData && (
-                <div className="mb-8">
-                    <h4 className="text-md font-medium text-gray-600 dark:text-gray-300 mb-3">Kas Grubu Dağılımı (Hacme Göre)</h4>
+                <div>
+                    <h3 className="text-md font-semibold text-system-label-secondary mb-3">Kas Grubu Dağılımı (Hacme Göre)</h3>
                     <div className="h-80 w-full"><ResponsiveContainer>
                         <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarChartData.data}>
                             <PolarGrid stroke={chartStyles.gridColor} />
-                            <PolarAngleAxis dataKey="subject" tick={{ fill: chartStyles.tickColor, fontSize: 14 }} />
+                            <PolarAngleAxis dataKey="subject" tick={{ fill: chartStyles.tickColor, fontSize: 12 }} />
                             <PolarRadiusAxis angle={30} domain={[0, 'dataMax']} tick={false} axisLine={false} />
-                            <Radar name="Hacim" dataKey="value" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.6} />
+                            <Radar name="Hacim" dataKey="value" stroke="#0A84FF" fill="#0A84FF" fillOpacity={0.6} />
                             <Tooltip content={<CustomTooltip />} />
                         </RadarChart>
                     </ResponsiveContainer></div>
                 </div>
                 )}
                 
-                <div className="mb-6"><h4 className="text-md font-medium text-gray-600 dark:text-gray-300 mb-3">Toplam Volüm (kg)</h4><div className="h-56"><ResponsiveContainer width="100%" height="100%"><LineChart data={generalStats}><CartesianGrid strokeDasharray="3 3" stroke={chartStyles.gridColor} /><XAxis dataKey="dateFormatted" tick={{ fontSize: 12, fill: chartStyles.tickColor }} axisLine={{ stroke: chartStyles.axisLineColor }} tickLine={{ stroke: chartStyles.tickColor }} /><YAxis tick={{ fontSize: 12, fill: chartStyles.tickColor }} axisLine={{ stroke: chartStyles.axisLineColor }} tickLine={{ stroke: chartStyles.tickColor }} /><Tooltip content={<CustomTooltip />} /><Line type="monotone" dataKey="totalVolume" name="Toplam Volüm" unit=" kg" stroke="#3B82F6" strokeWidth={3} dot={{ fill: '#3B82F6', r: 5 }} activeDot={{ r: 7 }} /></LineChart></ResponsiveContainer></div></div>
+                <div><h3 className="text-md font-semibold text-system-label-secondary mb-3">Toplam Hacim (kg)</h3><div className="h-56"><ResponsiveContainer width="100%" height="100%"><LineChart data={generalStats}><CartesianGrid strokeDasharray="3 3" stroke={chartStyles.gridColor} /><XAxis dataKey="dateFormatted" tick={{ fontSize: 12, fill: chartStyles.tickColor }} /><YAxis tick={{ fontSize: 12, fill: chartStyles.tickColor }} /><Tooltip content={<CustomTooltip />} /><Line type="monotone" dataKey="totalVolume" name="Toplam Hacim" unit=" kg" stroke="#0A84FF" strokeWidth={2.5} dot={{ fill: '#0A84FF', r: 4 }} activeDot={{ r: 6 }} /></LineChart></ResponsiveContainer></div></div>
                 
-                <div className="mb-8"><h4 className="text-md font-medium text-gray-600 dark:text-gray-300 mb-3">Toplam Set Sayısı</h4><div className="h-56"><ResponsiveContainer width="100%" height="100%"><BarChart data={generalStats}><CartesianGrid strokeDasharray="3 3" stroke={chartStyles.gridColor} /><XAxis dataKey="dateFormatted" tick={{ fontSize: 12, fill: chartStyles.tickColor }} axisLine={{ stroke: chartStyles.axisLineColor }} tickLine={{ stroke: chartStyles.tickColor }} /><YAxis tick={{ fontSize: 12, fill: chartStyles.tickColor }} allowDecimals={false} axisLine={{ stroke: chartStyles.axisLineColor }} tickLine={{ stroke: chartStyles.tickColor }} /><Tooltip content={<CustomTooltip />} cursor={{fill: 'rgba(249, 115, 22, 0.1)'}}/><Bar dataKey="totalSets" name="Toplam Set" unit=" set" radius={[6, 6, 0, 0]} barSize={20} fill="#F97316" /></BarChart></ResponsiveContainer></div></div>
-
+                <div><h3 className="text-md font-semibold text-system-label-secondary mb-3">Toplam Set Sayısı</h3><div className="h-56"><ResponsiveContainer width="100%" height="100%"><BarChart data={generalStats}><CartesianGrid strokeDasharray="3 3" stroke={chartStyles.gridColor} /><XAxis dataKey="dateFormatted" tick={{ fontSize: 12, fill: chartStyles.tickColor }} /><YAxis tick={{ fontSize: 12, fill: chartStyles.tickColor }} allowDecimals={false} /><Tooltip content={<CustomTooltip />} cursor={{fill: 'rgba(255, 159, 10, 0.1)'}}/><Bar dataKey="totalSets" name="Toplam Set" unit=" set" radius={[8, 8, 0, 0]} barSize={20} fill="#FF9F0A" /></BarChart></ResponsiveContainer></div></div>
             </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-100 dark:border-gray-700">
-                <h3 className="font-bold text-xl text-gray-800 dark:text-gray-100 mb-4">Hareket Bazlı İlerleme</h3>
-                <div className="mb-4"><select value={selectedExercise} onChange={(e) => setSelectedExercise(e.target.value)} className="w-full p-3 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-base"><option value="">Hareket seçin</option>{allExercises.map(exercise => (<option key={exercise} value={exercise}>{exercise}</option>))}</select></div>
+            <div className="bg-system-background-secondary rounded-2xl p-4 space-y-4">
+                <h2 className="font-bold text-xl text-system-label">Hareket Bazlı İlerleme</h2>
+                <select value={selectedExercise} onChange={(e) => setSelectedExercise(e.target.value)} className="w-full p-3 border-none bg-system-background-tertiary text-system-label rounded-lg focus:outline-none focus:ring-2 focus:ring-system-blue text-base">
+                    <option value="">Hareket seçin</option>
+                    {allExercises.map(exercise => (<option key={exercise} value={exercise}>{exercise}</option>))}
+                </select>
+                
                 {selectedExercise && exerciseData.length > 0 ? (
                 <div className="space-y-6">
-                    <div><h4 className="text-md font-medium text-gray-600 dark:text-gray-300 mb-3">Maksimum Ağırlık - {selectedExercise}</h4><div className="h-56"><ResponsiveContainer width="100%" height="100%"><LineChart data={exerciseData}><CartesianGrid strokeDasharray="3 3" stroke={chartStyles.gridColor} /><XAxis dataKey="dateFormatted" tick={{ fontSize: 12, fill: chartStyles.tickColor }} axisLine={{ stroke: chartStyles.axisLineColor }} tickLine={{ stroke: chartStyles.tickColor }} /><YAxis type="number" domain={['dataMin - 5', 'dataMax + 5']} tick={{ fontSize: 12, fill: chartStyles.tickColor }} axisLine={{ stroke: chartStyles.axisLineColor }} tickLine={{ stroke: chartStyles.tickColor }} /><Tooltip content={<CustomTooltip />} /><Line type="monotone" dataKey="maxWeight" name="Maks Ağırlık" unit=" kg" stroke="#10B981" strokeWidth={3} dot={{ fill: '#10B981', r: 5 }} activeDot={{ r: 7 }} /></LineChart></ResponsiveContainer></div></div>
-                    <div><h4 className="text-md font-medium text-gray-600 dark:text-gray-300 mb-3">Toplam Volüm - {selectedExercise}</h4><div className="h-56"><ResponsiveContainer width="100%" height="100%"><BarChart data={exerciseData}><CartesianGrid strokeDasharray="3 3" stroke={chartStyles.gridColor} /><XAxis dataKey="dateFormatted" tick={{ fontSize: 12, fill: chartStyles.tickColor }} axisLine={{ stroke: 'transparent' }} tickLine={{ stroke: 'transparent' }} /><YAxis tick={{ fontSize: 12, fill: chartStyles.tickColor }} axisLine={{ stroke: 'transparent' }} tickLine={{ stroke: 'transparent' }} /><Tooltip content={<CustomTooltip />} cursor={{fill: 'rgba(139, 92, 246, 0.1)'}}/><Bar dataKey="totalVolume" name="Toplam Volüm" unit=" kg" radius={[6, 6, 0, 0]} barSize={20} fill="#8B5CF6"/></BarChart></ResponsiveContainer></div></div>
+                    <div><h3 className="text-md font-semibold text-system-label-secondary mb-3">Maksimum Ağırlık - {selectedExercise}</h3><div className="h-56"><ResponsiveContainer width="100%" height="100%"><LineChart data={exerciseData}><CartesianGrid strokeDasharray="3 3" stroke={chartStyles.gridColor} /><XAxis dataKey="dateFormatted" tick={{ fontSize: 12, fill: chartStyles.tickColor }} /><YAxis type="number" domain={['dataMin - 5', 'dataMax + 5']} tick={{ fontSize: 12, fill: chartStyles.tickColor }} /><Tooltip content={<CustomTooltip />} /><Line type="monotone" dataKey="maxWeight" name="Maks Ağırlık" unit=" kg" stroke="#30D158" strokeWidth={2.5} dot={{ fill: '#30D158', r: 4 }} activeDot={{ r: 6 }} /></LineChart></ResponsiveContainer></div></div>
+                    <div><h3 className="text-md font-semibold text-system-label-secondary mb-3">Toplam Hacim - {selectedExercise}</h3><div className="h-56"><ResponsiveContainer width="100%" height="100%"><BarChart data={exerciseData}><CartesianGrid strokeDasharray="3 3" stroke={chartStyles.gridColor} /><XAxis dataKey="dateFormatted" tick={{ fontSize: 12, fill: chartStyles.tickColor }} /><YAxis tick={{ fontSize: 12, fill: chartStyles.tickColor }} /><Tooltip content={<CustomTooltip />} cursor={{fill: 'rgba(175, 82, 222, 0.1)'}}/><Bar dataKey="totalVolume" name="Toplam Hacim" unit=" kg" radius={[8, 8, 0, 0]} barSize={20} fill="#AF52DE"/></BarChart></ResponsiveContainer></div></div>
                 </div>
-                ) : selectedExercise && exerciseData.length === 0 ? (<div className="text-center py-4 text-gray-500 dark:text-gray-500 text-md">Bu hareket için seçili aralıkta veri bulunmuyor.</div>) : (<div className="text-center py-4 text-gray-500 dark:text-gray-500 text-md">Yukarıdan bir hareket seçerek ilerlemenizi görüntüleyin.</div>)}
+                ) : selectedExercise && exerciseData.length === 0 ? (<div className="text-center py-8 text-system-label-secondary text-md">Bu hareket için seçili aralıkta veri bulunmuyor.</div>) : (<div className="text-center py-8 text-system-label-secondary text-md">İlerlemenizi görmek için bir hareket seçin.</div>)}
             </div>
         </>
       )}
