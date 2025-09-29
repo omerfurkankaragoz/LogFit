@@ -3,7 +3,7 @@
   "short_name": "LogFit",
   "description": "Mobil Fitness Takip Uygulaması",
   "start_url": "/",
-  "display": "standalone",
+  "display": "minimal-ui",
   "background_color": "#111827",
   "theme_color": "#1f2937",
   "icons": [
