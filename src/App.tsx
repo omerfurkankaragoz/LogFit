@@ -153,7 +153,7 @@ function App() {
   const handleAddExerciseFromLibrary = (exerciseToAdd: LibraryExercise) => {
     const todayStr = new Date().toISOString().split('T')[0];
     const workoutForToday = workouts.find(w => w.date === todayStr);
-    const workoutToEdit = editingWorkout && editingWorkout.date === todayStr ? editingWorkout : workoutToEdit;
+    const workoutToEdit = editingWorkout && editingWorkout.date === todayStr ? editingWorkout : workoutForToday;
     const newExercise: Exercise = {
         id: `${exerciseToAdd.id}-${Date.now()}`,
         name: exerciseToAdd.name, bodyPart: exerciseToAdd.bodyPart, sets: [{ reps: 0, weight: 0 }]
@@ -161,6 +161,7 @@ function App() {
     if (workoutToEdit) {
         if (workoutToEdit.exercises.some(ex => ex.name.toLowerCase() === newExercise.name.toLowerCase())) {
              alert(`"${newExercise.name}" zaten bugünkü antrenmanınızda mevcut.`);
+             return;
         } else {
             setEditingWorkout({ ...workoutToEdit, exercises: [newExercise, ...workoutToEdit.exercises] });
         }
@@ -185,9 +186,8 @@ function App() {
   if (!session) return <Auth />;
 
   const renderHeader = () => {
-    // DEĞİŞİKLİK BURADA: Rengi yeni arka plan rengimizle güncelliyoruz
     return (
-      <header className="sticky top-0 z-20 h-[env(safe-area-inset-top)] bg-system-background" />
+      <header className="sticky top-0 z-20 h-[env(safe-area-inset-top)] bg-system-background-secondary/80 backdrop-blur-xl" />
     );
   };
 
@@ -223,10 +223,10 @@ function App() {
       { view: 'profile', icon: User, label: 'Profil' },
     ];
     return (
-      <nav className="fixed bottom-0 left-0 right-0 bg-system-background-secondary/80 backdrop-blur-lg border-t border-system-separator">
+      <nav className="fixed bottom-0 left-0 right-0 bg-system-background-secondary/80 backdrop-blur-xl border-t border-system-separator">
         <div className="max-w-md mx-auto flex justify-around px-2 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
             {navItems.map(item => (
-              <button key={item.view} onClick={() => setCurrentView(item.view as View)} className={`flex flex-col items-center justify-center gap-1 w-1/5 py-1 rounded-lg transition-colors duration-200 ${currentView === item.view ? 'text-system-blue' : 'text-system-label-secondary'}`}>
+              <button key={item.view} onClick={() => setCurrentView(item.view as View)} className={`flex flex-col items-center justify-center gap-1 w-1/5 py-1 rounded-lg transition-colors duration-200 ${currentView === item.view ? 'text-system-blue' : 'text-system-label-secondary hover:text-system-label'}`}>
                   <item.icon size={24} strokeWidth={currentView === item.view ? 2.5 : 2} />
                   <span className="text-xs font-medium">{item.label}</span>
               </button>

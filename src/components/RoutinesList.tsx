@@ -41,7 +41,7 @@ const RoutinesList: React.FC<RoutinesListProps> = ({ routines, onAddNewRoutine, 
         <h1 className="text-3xl font-bold text-system-label">Rutinler</h1>
         <button
           onClick={onAddNewRoutine}
-          className="bg-system-blue text-white p-2 rounded-full shadow-md hover:opacity-90 transition-opacity"
+          className="bg-system-blue text-white p-2 rounded-full hover:opacity-90 transition-opacity active:scale-95"
         >
           <Plus size={22} />
         </button>
@@ -63,10 +63,10 @@ const RoutinesList: React.FC<RoutinesListProps> = ({ routines, onAddNewRoutine, 
                 <div key={routine.id}>
                 <button
                     onClick={() => handleCardClick(routine.id)}
-                    className="w-full text-left p-4 flex justify-between items-center"
+                    className="w-full text-left p-4 flex justify-between items-center hover:bg-system-fill-tertiary transition-colors"
                 >
                     <div className="flex-1 min-w-0 pr-4">
-                    <h3 className="font-semibold text-system-label">{routine.name}</h3>
+                    <h3 className="font-semibold text-system-label text-lg">{routine.name}</h3>
                     <p className="text-sm text-system-label-secondary mt-1">
                         {routine.exercises?.length || 0} hareket
                     </p>
@@ -90,15 +90,15 @@ const RoutinesList: React.FC<RoutinesListProps> = ({ routines, onAddNewRoutine, 
                                 alt={ex.name}
                                 className="w-10 h-10 rounded-lg object-cover flex-shrink-0 bg-system-background-tertiary"
                                 />
-                                <span className="text-sm text-system-label-secondary">{ex.name}</span>
+                                <span className="text-sm text-system-label">{ex.name}</span>
                             </div>
                             );
                         })}
                         </div>
                         <div className="flex gap-2 mt-4 pt-4 border-t border-system-separator">
-                            <button onClick={(e) => { e.stopPropagation(); onCopyRoutine(routine); }} className="flex-1 py-2 px-3 bg-system-fill-tertiary text-system-label rounded-lg flex items-center justify-center gap-2 text-sm font-medium hover:opacity-80 transition-opacity"> <Copy size={16} /> Kopyala </button>
-                            <button onClick={(e) => { e.stopPropagation(); onEditRoutine(routine); }} className="flex-1 py-2 px-3 bg-system-fill-tertiary text-system-label rounded-lg flex items-center justify-center gap-2 text-sm font-medium hover:opacity-80 transition-opacity"> <Edit size={16} /> Düzenle </button>
-                            <button onClick={(e) => { e.stopPropagation(); onDeleteRoutine(routine.id); }} className="flex-1 py-2 px-3 bg-system-red text-white rounded-lg flex items-center justify-center gap-2 text-sm font-medium hover:opacity-80 transition-opacity"> <Trash2 size={16} /> Sil </button>
+                            <button onClick={(e) => { e.stopPropagation(); onCopyRoutine(routine); }} className="flex-1 py-2 px-3 bg-system-fill-tertiary text-system-label rounded-lg flex items-center justify-center gap-2 text-sm font-medium hover:bg-system-fill-secondary transition-colors"> <Copy size={16} /> Kopyala </button>
+                            <button onClick={(e) => { e.stopPropagation(); onEditRoutine(routine); }} className="flex-1 py-2 px-3 bg-system-fill-tertiary text-system-label rounded-lg flex items-center justify-center gap-2 text-sm font-medium hover:bg-system-fill-secondary transition-colors"> <Edit size={16} /> Düzenle </button>
+                            <button onClick={(e) => { e.stopPropagation(); onDeleteRoutine(routine.id); }} className="flex-1 py-2 px-3 bg-system-red text-white rounded-lg flex items-center justify-center gap-2 text-sm font-medium hover:opacity-90 transition-opacity"> <Trash2 size={16} /> Sil </button>
                         </div>
                     </div>
                     </div>
