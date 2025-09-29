@@ -1,22 +1,74 @@
 // src/components/CreateRoutine.tsx
 import React, { useState, useEffect, useMemo } from 'react';
-import { Save, Plus, Trash2, Search, Filter, X } from 'lucide-react';
+import { Save, Plus, Trash2, Search, X, GripVertical } from 'lucide-react';
 import { Routine } from './RoutinesList';
 import { getAllExercises, getBodyParts, Exercise as LibraryExercise } from '../services/exerciseApi';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 const SUPABASE_PROJECT_URL = 'https://ekrhekungvoisfughwuz.supabase.co';
 const BUCKET_NAME = 'images';
 
+// Sürüklenebilir her bir egzersiz öğesi için ayrı bir bileşen
+function SortableExercise({ id, name, onRemove }: { id: string; name: string; onRemove: (id: string) => void; }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 10 : 'auto',
+    boxShadow: isDragging ? '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)' : 'none',
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center justify-between p-4 rounded-xl text-gray-800 dark:text-gray-200 text-base mb-2 select-none bg-gray-50 dark:bg-gray-700`}
+    >
+      <div className="flex items-center gap-3">
+        <button {...attributes} {...listeners} className="cursor-grab touch-none p-1">
+            <GripVertical className="text-gray-400" />
+        </button>
+        <span>{name}</span>
+      </div>
+      <button onClick={() => onRemove(id)} className="p-2 text-red-500 hover:text-red-700 rounded-md transition-colors active:scale-95"><Trash2 size={20} /></button>
+    </div>
+  );
+}
+
+
 interface CreateRoutineProps {
-  existingRoutine: Routine | null;
-  // DEĞİŞİKLİK BURADA: onSaveRoutine artık bodyPart içeren bir array bekliyor
+  existingRoutine: Partial<Routine> | null; // Tip Partial<Routine> olarak güncellendi
   onSaveRoutine: (id: string | null, name: string, exercises: { id: string; name: string; bodyPart?: string }[]) => void;
   onCancel: () => void;
 }
 
 const CreateRoutine: React.FC<CreateRoutineProps> = ({ existingRoutine, onSaveRoutine, onCancel }) => {
   const [routineName, setRoutineName] = useState('');
-  // DEĞİŞİKLİK BURADA: selectedExercises state'i artık bodyPart içeriyor
   const [selectedExercises, setSelectedExercises] = useState<{ id: string; name: string; bodyPart?: string }[]>([]);
   const [manualExerciseName, setManualExerciseName] = useState('');
 
@@ -24,12 +76,18 @@ const CreateRoutine: React.FC<CreateRoutineProps> = ({ existingRoutine, onSaveRo
   const [allLibraryExercises, setAllLibraryExercises] = useState<LibraryExercise[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedBodyPart, setSelectedBodyPart] = useState('all');
-  const [showFilters, setShowFilters] = useState(false);
   const [bodyParts, setBodyParts] = useState<string[]>([]);
 
   const [showLargeImage, setShowLargeImage] = useState(false);
   const [currentLargeImageUrl, setCurrentLargeImageUrl] = useState<string | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(TouchSensor), // Mobil cihazlar için
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -47,12 +105,12 @@ const CreateRoutine: React.FC<CreateRoutineProps> = ({ existingRoutine, onSaveRo
 
   useEffect(() => {
     if (existingRoutine) {
-      setRoutineName(existingRoutine.name);
-      // Mevcut rutin yüklenirken de bodyPart'ları (varsa) yükle
-      setSelectedExercises(existingRoutine.exercises.map(ex => {
+      setRoutineName(existingRoutine.name || '');
+      const initialExercises = existingRoutine.exercises?.map(ex => {
           const libEx = allLibraryExercises.find(lib => lib.name.toLowerCase() === ex.name.toLowerCase());
           return {...ex, bodyPart: ex.bodyPart || libEx?.bodyPart }
-      }));
+      }) || [];
+      setSelectedExercises(initialExercises);
     }
   }, [existingRoutine, allLibraryExercises]);
 
@@ -68,17 +126,10 @@ const CreateRoutine: React.FC<CreateRoutineProps> = ({ existingRoutine, onSaveRo
         ex.name.toLowerCase().includes(searchQuery.trim().toLowerCase())
       );
     }
-
-    if (selectedBodyPart !== 'all') {
-      exercises = exercises.filter(ex =>
-        ex.bodyPart && ex.bodyPart.toLowerCase() === selectedBodyPart.toLowerCase()
-      );
-    }
     
     return exercises;
-  }, [searchQuery, selectedBodyPart, allLibraryExercises, selectedExercises]);
+  }, [searchQuery, allLibraryExercises, selectedExercises]);
 
-  // DEĞİŞİKLİK BURADA: Kütüphaneden eklerken bodyPart bilgisini de alıyoruz.
   const handleAddExerciseFromLibrary = (exercise: LibraryExercise) => {
     if (!selectedExercises.find(e => e.name.toLowerCase() === exercise.name.toLowerCase())) {
       setSelectedExercises(prev => [...prev, { id: exercise.id, name: exercise.name, bodyPart: exercise.bodyPart }]);
@@ -88,7 +139,6 @@ const CreateRoutine: React.FC<CreateRoutineProps> = ({ existingRoutine, onSaveRo
   const handleManualAddExercise = () => {
     const trimmedName = manualExerciseName.trim();
     if (trimmedName && !selectedExercises.find(e => e.name.toLowerCase() === trimmedName.toLowerCase())) {
-      // Manuel eklenen hareketin bodyPart'ı olmaz. 'Diğer' olarak kategorize edilir.
       const newExercise = {
         id: `manual-${Date.now()}`,
         name: trimmedName,
@@ -102,6 +152,19 @@ const CreateRoutine: React.FC<CreateRoutineProps> = ({ existingRoutine, onSaveRo
   const handleRemoveExercise = (exerciseId: string) => {
     setSelectedExercises(prev => prev.filter(e => e.id !== exerciseId));
   };
+  
+  function handleDragEnd(event: DragEndEvent) {
+    const {active, over} = event;
+    
+    if (active.id !== over?.id) {
+      setSelectedExercises((items) => {
+        const oldIndex = items.findIndex(item => item.id === active.id);
+        const newIndex = items.findIndex(item => item.id === over?.id);
+        
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
+  }
 
   const handleSave = () => {
     if (!routineName.trim()) {
@@ -112,14 +175,12 @@ const CreateRoutine: React.FC<CreateRoutineProps> = ({ existingRoutine, onSaveRo
       alert('Lütfen rutine en az bir hareket ekleyin.');
       return;
     }
-    onSaveRoutine(existingRoutine ? existingRoutine.id : null, routineName, selectedExercises);
+    onSaveRoutine(existingRoutine?.id || null, routineName, selectedExercises);
   };
 
   const getImageUrl = (gifPath: string) => {
     if (!gifPath) return 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop';
-    
     const imagePath = gifPath.replace('0.jpg', '1.jpg');
-
     return `${SUPABASE_PROJECT_URL}/storage/v1/object/public/${BUCKET_NAME}/exercises/${imagePath}`;
   };
 
@@ -150,14 +211,22 @@ const CreateRoutine: React.FC<CreateRoutineProps> = ({ existingRoutine, onSaveRo
 
       <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-100 dark:border-gray-700 space-y-3">
         <h3 className="font-semibold text-lg text-gray-800 dark:text-gray-100 mb-2">Rutindeki Hareketler ({selectedExercises.length})</h3>
-        {selectedExercises.length > 0 ? selectedExercises.map(ex => (
-          <div key={ex.id} className="flex items-center justify-between bg-gray-50 dark:bg-gray-700 p-4 rounded-xl shadow-sm text-gray-800 dark:text-gray-200 text-base">
-            <span>{ex.name}</span>
-            <button onClick={() => handleRemoveExercise(ex.id)} className="p-2 text-red-500 hover:text-red-700 rounded-md transition-colors active:scale-95"><Trash2 size={20} /></button>
-          </div>
-        )) : (
-            <p className="text-md text-center text-gray-500 dark:text-gray-400 py-4">Rutine hareket eklemek için aşağıdaki listeden arama yapın veya manuel ekleyin.</p>
-        )}
+        <DndContext 
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext 
+            items={selectedExercises}
+            strategy={verticalListSortingStrategy}
+          >
+            {selectedExercises.length > 0 ? selectedExercises.map(ex => 
+                <SortableExercise key={ex.id} id={ex.id} name={ex.name} onRemove={handleRemoveExercise} />
+            ) : (
+                <p className="text-md text-center text-gray-500 dark:text-gray-400 py-4">Rutine hareket eklemek için aşağıdaki listeden arama yapın veya manuel ekleyin.</p>
+            )}
+          </SortableContext>
+        </DndContext>
       </div>
 
       <div className="space-y-4 pt-6 mt-6 bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-100 dark:border-gray-700">

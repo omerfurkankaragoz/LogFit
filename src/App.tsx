@@ -1,7 +1,7 @@
 // src/App.tsx
 
 import React, { useState, useEffect } from 'react';
-import { Calendar, Dumbbell, BarChart3, ArrowLeft, BookOpen, LogOut, User } from 'lucide-react';
+import { Calendar, Dumbbell, BarChart3, ArrowLeft, BookOpen, LogOut, User, Copy } from 'lucide-react';
 import WorkoutCalendar from './components/WorkoutCalendar';
 import AddWorkout from './components/AddWorkout';
 import WorkoutDetails from './components/WorkoutDetails';
@@ -41,7 +41,7 @@ function App() {
   const [currentView, setCurrentView] = useState<View>('calendar');
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [editingWorkout, setEditingWorkout] = useState<Workout | null>(null);
-  const [editingRoutine, setEditingRoutine] = useState<Routine | null>(null);
+  const [editingRoutine, setEditingRoutine] = useState<Partial<Routine> | null>(null);
   const [previousView, setPreviousView] = useState<View>('calendar');
 
   // Kullanıcı oturumunu dinle
@@ -143,6 +143,16 @@ function App() {
     setEditingRoutine(routine);
   };
 
+  const handleCopyRoutine = (routine: Routine) => {
+    const { id, ...routineData } = routine; // ID'yi kaldırarak kopyasını oluştur
+    const copiedRoutine = {
+      ...routineData,
+      name: `${routine.name} (Kopya)`,
+    };
+    setEditingRoutine(copiedRoutine); // Kopyalanan rutini düzenleme moduna al
+    handleSetView('create_routine'); // Düzenleme ekranına git
+  };
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setWorkouts([]);
@@ -207,50 +217,7 @@ function App() {
   if (!session) {
     return <Auth />;
   }
-/* eski header bunu silme
-  const renderHeader = () => {
-    const titles: Record<View, string> = {
-      calendar: 'Takvim',
-      add: editingWorkout ? 'Antrenman Düzenle' : 'Antrenman Ekle',
-      details: 'Antrenman Detayı',
-      progress: 'İstatistikler',
-      routines: 'Rutinlerim',
-      create_routine: editingRoutine ? 'Rutini Düzenle' : 'Yeni Rutin Oluştur',
-      library: 'Hareket Kütüphanesi',
-      profile: 'Profilim'
-    };
-    
-    const isSubPage = !['calendar', 'routines', 'progress', 'library', 'profile'].includes(currentView);
 
-    return (
-      <header className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-4 shadow-lg sticky top-0 z-30">
-        <div className="max-w-md mx-auto flex items-center justify-between">
-          <div className="w-10">
-            {isSubPage && (
-              <button
-                onClick={() => setCurrentView(previousView)}
-                className="p-2 hover:bg-blue-800 rounded-full transition-colors"
-              >
-                <ArrowLeft size={24} />
-              </button>
-            )}
-          </div>
-          <h1 className="text-xl font-bold flex items-center gap-2">
-            <Dumbbell size={24} />
-            {titles[currentView]}
-          </h1>
-          <div className="w-10">
-            {currentView === 'profile' && (
-              <button onClick={handleLogout} className="p-2 hover:bg-blue-800 rounded-full transition-colors">
-                <LogOut size={22} />
-              </button>
-            )}
-          </div>
-        </div>
-      </header>
-    );
-    
-  };*/
  const renderHeader = () => {
  // Bu header, sadece telefonun üstündeki çentik/durum çubuğu alanını doldurur.
  // Yüksekliği dinamik olarak 'safe-area-inset-top' ile belirlenir.
@@ -271,6 +238,7 @@ function App() {
           onAddNewRoutine={() => { setEditingRoutine(null); handleSetView('create_routine'); }}
           onEditRoutine={handleEditRoutine}
           onDeleteRoutine={handleDeleteRoutine}
+          onCopyRoutine={handleCopyRoutine}
         />;
       case 'create_routine':
         return <CreateRoutine 

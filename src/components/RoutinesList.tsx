@@ -1,12 +1,11 @@
 // src/components/RoutinesList.tsx
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, ChevronDown, X } from 'lucide-react';
+import { Plus, Edit, Trash2, ChevronDown, X, Copy } from 'lucide-react';
 import { getAllExercises, Exercise as LibraryExercise } from '../services/exerciseApi';
 
 export interface Routine {
   id: string;
   name: string;
-  // DEĞİŞİKLİK BURADA: exercises array'i artık bodyPart içerebilir
   exercises: { id: string; name: string; bodyPart?: string }[];
 }
 
@@ -15,13 +14,14 @@ interface RoutinesListProps {
   onAddNewRoutine: () => void;
   onEditRoutine: (routine: Routine) => void;
   onDeleteRoutine: (routineId: string) => void;
+  onCopyRoutine: (routine: Routine) => void;
 }
 
 // Supabase URL ve Bucket bilgileri
 const SUPABASE_PROJECT_URL = 'https://ekrhekungvoisfughwuz.supabase.co';
 const BUCKET_NAME = 'images';
 
-const RoutinesList: React.FC<RoutinesListProps> = ({ routines, onAddNewRoutine, onEditRoutine, onDeleteRoutine }) => {
+const RoutinesList: React.FC<RoutinesListProps> = ({ routines, onAddNewRoutine, onEditRoutine, onDeleteRoutine, onCopyRoutine }) => {
   const [expandedRoutineId, setExpandedRoutineId] = useState<string | null>(null);
   const [libraryExercises, setLibraryExercises] = useState<LibraryExercise[]>([]);
   const [showLargeImage, setShowLargeImage] = useState(false);
@@ -129,15 +129,21 @@ const RoutinesList: React.FC<RoutinesListProps> = ({ routines, onAddNewRoutine, 
                       })}
                     </div>
                   </div>
-                  <div className="flex gap-3 mt-5 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <div className="flex gap-2 mt-5 pt-4 border-t border-gray-200 dark:border-gray-700">
                     <button
-                      onClick={() => onEditRoutine(routine)}
+                      onClick={(e) => { e.stopPropagation(); onCopyRoutine(routine); }}
+                      className="flex-1 py-3 px-4 bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 rounded-xl flex items-center justify-center gap-2 text-sm font-medium hover:bg-green-200 dark:hover:bg-green-800 transition-colors"
+                    >
+                      <Copy size={18} /> Kopyala
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onEditRoutine(routine); }}
                       className="flex-1 py-3 px-4 bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 rounded-xl flex items-center justify-center gap-2 text-sm font-medium hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
                     >
                       <Edit size={18} /> Düzenle
                     </button>
                     <button
-                      onClick={() => onDeleteRoutine(routine.id)}
+                      onClick={(e) => { e.stopPropagation(); onDeleteRoutine(routine.id); }}
                       className="flex-1 py-3 px-4 bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 rounded-xl flex items-center justify-center gap-2 text-sm font-medium hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
                     >
                       <Trash2 size={18} /> Sil
