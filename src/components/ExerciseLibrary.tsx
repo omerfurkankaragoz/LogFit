@@ -1,18 +1,19 @@
 // src/components/ExerciseLibrary.tsx
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Plus, X } from 'lucide-react';
-import { Exercise, getAllExercises, getBodyParts } from '../services/exerciseApi';
+import { Search, Filter, Plus, X, Star } from 'lucide-react';
+import { Exercise, getBodyParts } from '../services/exerciseApi';
 
 const SUPABASE_PROJECT_URL = 'https://ekrhekungvoisfughwuz.supabase.co';
 const BUCKET_NAME = 'images';
 
 interface ExerciseLibraryProps {
   onExerciseSelect: (exercise: Exercise) => void;
-  onBack: () => void;
+  allExercises: Exercise[];
+  favoriteExercises: string[];
+  onToggleFavorite: (exerciseId: string) => void;
 }
 
-const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({ onExerciseSelect }) => {
-  const [allExercises, setAllExercises] = useState<Exercise[]>([]);
+const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({ onExerciseSelect, allExercises, favoriteExercises, onToggleFavorite }) => {
   const [filteredExercises, setFilteredExercises] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -24,19 +25,14 @@ const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({ onExerciseSelect }) =
   const [currentLargeImageUrl, setCurrentLargeImageUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchInitialData = async () => {
+    const fetchBodyPartsData = async () => {
       setLoading(true);
-      const [parts, exercises] = await Promise.all([
-        getBodyParts(),
-        getAllExercises()
-      ]);
+      const parts = await getBodyParts();
       setBodyParts(parts);
-      setAllExercises(exercises);
-      setFilteredExercises(exercises);
       setLoading(false);
     };
 
-    fetchInitialData();
+    fetchBodyPartsData();
   }, []);
 
   useEffect(() => {
@@ -47,12 +43,16 @@ const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({ onExerciseSelect }) =
       );
     }
     if (selectedBodyPart !== 'all') {
-      exercises = exercises.filter(ex =>
-        ex.bodyPart && ex.bodyPart.toLowerCase() === selectedBodyPart.toLowerCase()
-      );
+      if (selectedBodyPart === 'favorites') {
+        exercises = exercises.filter(ex => favoriteExercises.includes(ex.id));
+      } else {
+        exercises = exercises.filter(ex =>
+          ex.bodyPart && ex.bodyPart.toLowerCase() === selectedBodyPart.toLowerCase()
+        );
+      }
     }
     setFilteredExercises(exercises);
-  }, [searchQuery, selectedBodyPart, allExercises]);
+  }, [searchQuery, selectedBodyPart, allExercises, favoriteExercises]);
 
   const handleExerciseSelect = (exercise: Exercise) => {
     if (confirm(`"${exercise.name}" hareketini bugünkü antrenmana eklemek istiyor musunuz?`)) {
@@ -60,19 +60,10 @@ const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({ onExerciseSelect }) =
     }
   };
   
-  // GÜNCELLENDİ: Bu fonksiyon artık "0.jpg"yi "1.jpg" ile değiştiriyor.
   const getImageUrl = (gifPath: string) => {
     if (!gifPath) return 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop';
-    
     const imagePath = gifPath.replace('0.jpg', '1.jpg');
-    
     return `${SUPABASE_PROJECT_URL}/storage/v1/object/public/${BUCKET_NAME}/exercises/${imagePath}`;
-  };
-
-  const getBodyPartEmoji = (bodyPart: string) => {
-    if (!bodyPart) return '🏃';
-    const emojis: { [key: string]: string } = { 'chest': '💪', 'back': '🏋️', 'shoulders': '🤸', 'waist': '🔥', 'cardio': '🏃', 'lower arms': '💪', 'upper arms': '💪', 'lower legs': '🦵', 'upper legs': '🦵', 'neck': '🤸', 'abdominals': '🔥' };
-    return emojis[bodyPart.toLowerCase()] || '🏃';
   };
   
   const getBodyPartName = (bodyPart: string) => {
@@ -106,7 +97,8 @@ const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({ onExerciseSelect }) =
             <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-3 text-base">Vücut Bölgesi</h3>
             <div className="flex flex-wrap gap-2">
               <button onClick={() => setSelectedBodyPart('all')} className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors hover:scale-[1.03] active:scale-95 ${selectedBodyPart === 'all' ? 'bg-blue-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'}`}>Tümü</button>
-              {bodyParts.map(bodyPart => (<button key={bodyPart} onClick={() => setSelectedBodyPart(bodyPart)} className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors flex items-center gap-1 hover:scale-[1.03] active:scale-95 ${selectedBodyPart === bodyPart ? 'bg-blue-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'}`}><span>{getBodyPartEmoji(bodyPart)}</span>{getBodyPartName(bodyPart)}</button>))}
+              <button onClick={() => setSelectedBodyPart('favorites')} className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors flex items-center gap-2 hover:scale-[1.03] active:scale-95 ${selectedBodyPart === 'favorites' ? 'bg-yellow-400 text-yellow-900 shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'}`}><Star size={16} />Favoriler</button>
+              {bodyParts.map(bodyPart => (<button key={bodyPart} onClick={() => setSelectedBodyPart(bodyPart)} className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors flex items-center gap-1 hover:scale-[1.03] active:scale-95 ${selectedBodyPart === bodyPart ? 'bg-blue-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'}`}>{getBodyPartName(bodyPart)}</button>))}
             </div>
           </div>
         )}
@@ -116,31 +108,39 @@ const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({ onExerciseSelect }) =
         <>
           <div className="mb-4"><p className="text-sm text-gray-600 dark:text-gray-400">{filteredExercises.length} hareket bulundu</p></div>
           <div className="space-y-3">
-            {filteredExercises.map(exercise => (
-              <div key={exercise.id} className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-lg border border-gray-100 dark:border-gray-700 hover:shadow-xl transform transition-all duration-200 ease-in-out hover:scale-[1.01]">
-                <div className="flex items-center gap-4">
-                  <div className="w-20 h-20 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-700 flex-shrink-0 cursor-pointer shadow-sm"
-                       onClick={() => handleImageClick(getImageUrl(exercise.gifUrl))}>
-                    <img 
-                      src={getImageUrl(exercise.gifUrl)} 
-                      alt={exercise.name} 
-                      className="w-full h-full object-cover" 
-                      onError={(e) => { e.currentTarget.src = 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop'; }}
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-lg text-gray-800 dark:text-gray-200 truncate mb-1">{exercise.name}</h3>
-                    <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 px-3 py-1 rounded-full font-medium">{getBodyPartName(exercise.bodyPart)}</span>
-                        <span className="text-xs bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 px-3 py-1 rounded-full font-medium">{exercise.equipment}</span>
+            {filteredExercises.map(exercise => {
+              const isFavorited = favoriteExercises.includes(exercise.id);
+              return (
+                <div key={exercise.id} className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-lg border border-gray-100 dark:border-gray-700 hover:shadow-xl transform transition-all duration-200 ease-in-out hover:scale-[1.01]">
+                  <div className="flex items-center gap-4">
+                    <div className="w-20 h-20 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-700 flex-shrink-0 cursor-pointer shadow-sm"
+                         onClick={() => handleImageClick(getImageUrl(exercise.gifUrl))}>
+                      <img 
+                        src={getImageUrl(exercise.gifUrl)} 
+                        alt={exercise.name} 
+                        className="w-full h-full object-cover" 
+                        onError={(e) => { e.currentTarget.src = 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop'; }}
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-lg text-gray-800 dark:text-gray-200 truncate mb-1">{exercise.name}</h3>
+                      <div className="flex items-center gap-2 mt-1">
+                          <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 px-3 py-1 rounded-full font-medium">{getBodyPartName(exercise.bodyPart)}</span>
+                          <span className="text-xs bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 px-3 py-1 rounded-full font-medium">{exercise.equipment}</span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                        <button onClick={() => handleExerciseSelect(exercise)} className="p-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all duration-200 ease-in-out active:scale-95 shadow-md flex-shrink-0">
+                            <Plus size={20} />
+                        </button>
+                        <button onClick={() => onToggleFavorite(exercise.id)} className="p-3 bg-gray-100 dark:bg-gray-700 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200 ease-in-out active:scale-95 shadow-md flex-shrink-0">
+                            <Star size={20} className={isFavorited ? 'text-yellow-400 fill-current' : 'text-gray-400'} />
+                        </button>
                     </div>
                   </div>
-                  <button onClick={() => handleExerciseSelect(exercise)} className="p-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all duration-200 ease-in-out active:scale-95 shadow-md flex-shrink-0">
-                    <Plus size={20} />
-                  </button>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </>
       )}

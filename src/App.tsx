@@ -1,7 +1,7 @@
 // src/App.tsx
 
 import React, { useState, useEffect } from 'react';
-import { Calendar, Dumbbell, BarChart3, ArrowLeft, BookOpen, LogOut, User, Copy } from 'lucide-react';
+import { Calendar, Dumbbell, BarChart3, BookOpen, User } from 'lucide-react';
 import WorkoutCalendar from './components/WorkoutCalendar';
 import AddWorkout from './components/AddWorkout';
 import WorkoutDetails from './components/WorkoutDetails';
@@ -13,13 +13,14 @@ import Auth from './components/Auth';
 import Profile from './components/Profile';
 import { supabase } from './services/supabaseClient';
 import { Session } from '@supabase/supabase-js';
-import { Exercise as LibraryExercise } from './services/exerciseApi';
+import { getAllExercises, Exercise as LibraryExercise } from './services/exerciseApi';
+
 
 // Arayüzler (Interfaces)
 export interface Exercise {
   id: string;
   name: string;
-  bodyPart?: string; // Kas grubu analizi için eklendi
+  bodyPart?: string;
   sets: { reps: number; weight: number }[];
 }
 export interface Workout {
@@ -43,6 +44,8 @@ function App() {
   const [editingWorkout, setEditingWorkout] = useState<Workout | null>(null);
   const [editingRoutine, setEditingRoutine] = useState<Partial<Routine> | null>(null);
   const [previousView, setPreviousView] = useState<View>('calendar');
+  const [allLibraryExercises, setAllLibraryExercises] = useState<LibraryExercise[]>([]);
+  const [favoriteExercises, setFavoriteExercises] = useState<string[]>([]);
 
   // Kullanıcı oturumunu dinle
   useEffect(() => {
@@ -59,7 +62,7 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Oturum açıldığında verileri çek
+  // Oturum açıldığında veya favoriler değiştiğinde verileri çek
   useEffect(() => {
     if (session) {
       fetchAllData();
@@ -70,16 +73,21 @@ function App() {
     if (!session) return;
     setLoading(true);
     try {
-      const [workoutsRes, routinesRes] = await Promise.all([
+      const [workoutsRes, routinesRes, exercisesRes, profileRes] = await Promise.all([
         supabase.from('workouts').select('*').eq('user_id', session.user.id).order('date', { ascending: false }),
         supabase.from('routines').select('*').eq('user_id', session.user.id).order('name'),
+        getAllExercises(),
+        supabase.from('profiles').select('favorite_exercises').eq('id', session.user.id).single(),
       ]);
       
       if (workoutsRes.error) throw workoutsRes.error;
       if (routinesRes.error) throw routinesRes.error;
+      if (profileRes.error && profileRes.status !== 406) throw profileRes.error; // 406 hatası profilin henüz olmadığı anlamına gelir, bu bir hata değil.
       
-      if (workoutsRes.data) setWorkouts(workoutsRes.data as Workout[]);
-      if (routinesRes.data) setRoutines(routinesRes.data as Routine[]);
+      setWorkouts(workoutsRes.data as Workout[] || []);
+      setRoutines(routinesRes.data as Routine[] || []);
+      setAllLibraryExercises(exercisesRes || []);
+      setFavoriteExercises(profileRes.data?.favorite_exercises || []);
 
     } catch (error) {
       console.error("Veri çekme hatası:", error);
@@ -88,12 +96,32 @@ function App() {
     }
   };
 
+  const toggleFavoriteExercise = async (exerciseId: string) => {
+    if (!session) return;
+
+    const isFavorited = favoriteExercises.includes(exerciseId);
+    const updatedFavorites = isFavorited
+      ? favoriteExercises.filter(id => id !== exerciseId)
+      : [...favoriteExercises, exerciseId];
+
+    setFavoriteExercises(updatedFavorites);
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({ favorite_exercises: updatedFavorites })
+      .eq('id', session.user.id);
+
+    if (error) {
+      console.error('Favori güncellenirken hata oluştu:', error);
+      // Hata durumunda eski state'e geri dön
+      setFavoriteExercises(favoriteExercises);
+    }
+  };
+
   const handleSetView = (view: View) => {
     setPreviousView(currentView);
     setCurrentView(view);
   };
-
-  // --- Veri Kaydetme / Güncelleme / Silme ---
 
   const handleSaveWorkout = async (workoutData: Omit<Workout, 'id' | 'user_id' | 'created_at'>) => {
       if (!session) return;
@@ -101,10 +129,8 @@ function App() {
       const workoutPayload = { ...workoutData, user_id: session.user.id };
   
       if (workoutToUpdate && workoutToUpdate.id !== 'new') {
-          // Güncelleme: exercises ve date alanlarını güncelle
           await supabase.from('workouts').update({ exercises: workoutPayload.exercises, date: workoutPayload.date }).eq('id', workoutToUpdate.id);
       } else {
-          // Ekleme: Yeni antrenman ekle
           await supabase.from('workouts').insert([workoutPayload]);
       }
       setEditingWorkout(null);
@@ -144,38 +170,29 @@ function App() {
   };
 
   const handleCopyRoutine = (routine: Routine) => {
-    const { id, ...routineData } = routine; // ID'yi kaldırarak kopyasını oluştur
+    const { id, ...routineData } = routine;
     const copiedRoutine = {
       ...routineData,
       name: `${routine.name} (Kopya)`,
     };
-    setEditingRoutine(copiedRoutine); // Kopyalanan rutini düzenleme moduna al
-    handleSetView('create_routine'); // Düzenleme ekranına git
-  };
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setWorkouts([]);
-    setRoutines([]);
-    setCurrentView('calendar');
+    setEditingRoutine(copiedRoutine);
+    handleSetView('create_routine');
   };
   
   const handleAddExerciseFromLibrary = (exerciseToAdd: LibraryExercise) => {
     const todayStr = new Date().toISOString().split('T')[0];
-    
     const workoutForToday = workouts.find(w => w.date === todayStr);
     const workoutToEdit = editingWorkout && editingWorkout.date === todayStr ? editingWorkout : workoutForToday;
 
     const newExercise: Exercise = {
         id: `${exerciseToAdd.id}-${Date.now()}`,
         name: exerciseToAdd.name,
-        bodyPart: exerciseToAdd.bodyPart, // Kas grubu analizi için eklendi
+        bodyPart: exerciseToAdd.bodyPart,
         sets: [{ reps: 0, weight: 0 }]
     };
 
     if (workoutToEdit) {
         const exerciseExists = workoutToEdit.exercises.some(ex => ex.name.toLowerCase() === newExercise.name.toLowerCase());
-        
         if (exerciseExists) {
              alert(`"${newExercise.name}" zaten bugünkü antrenmanınızda mevcut.`);
         } else {
@@ -196,19 +213,14 @@ function App() {
     handleSetView('add');
   };
 
-  // 5. MADDE İÇİN GÜNCELLENDİ
   const handleStartOrContinueWorkout = () => {
     const todayStr = new Date().toISOString().split('T')[0];
     const workoutForToday = workouts.find(w => w.date === todayStr);
 
     setSelectedDate(todayStr);
-    // Eğer bugün için antrenman varsa onu yükle, yoksa 'null' ile yeni antrenman sayfasına git
     setEditingWorkout(workoutForToday || null); 
     handleSetView('add');
   };
-
-
-  // --- Sayfa Yönlendirme ve Render ---
 
   if (loading) {
     return <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex justify-center items-center"><div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div></div>;
@@ -218,15 +230,11 @@ function App() {
     return <Auth />;
   }
 
- const renderHeader = () => {
- // Bu header, sadece telefonun üstündeki çentik/durum çubuğu alanını doldurur.
- // Yüksekliği dinamik olarak 'safe-area-inset-top' ile belirlenir.
- // İçinde herhangi bir yazı veya buton bulunmaz.
- return (
-<header className="sticky top-0 z-20 h-[env(safe-area-inset-top)] bg-gradient-to-r from-gray-900 to-gray-900" />
- );
- };
-
+  const renderHeader = () => {
+    return (
+      <header className="sticky top-0 z-20 h-[env(safe-area-inset-top)] bg-gradient-to-r from-gray-900 to-gray-900" />
+    );
+  };
 
   const renderContent = () => {
     switch (currentView) {
@@ -245,6 +253,8 @@ function App() {
           existingRoutine={editingRoutine} 
           onSaveRoutine={handleSaveRoutine} 
           onCancel={() => { setEditingRoutine(null); setCurrentView('routines'); }} 
+          allLibraryExercises={allLibraryExercises}
+          favoriteExercises={favoriteExercises}
         />;
       case 'calendar':
         return <WorkoutCalendar 
@@ -269,23 +279,28 @@ function App() {
           routines={routines}
           workouts={workouts}
           onSave={handleSaveWorkout} 
-          onCancel={() => { setEditingWorkout(null); setCurrentView('calendar'); }} 
+          onCancel={() => { setEditingWorkout(null); setCurrentView('calendar'); }}
+          allLibraryExercises={allLibraryExercises}
+          favoriteExercises={favoriteExercises}
         />;
       case 'details':
         const selectedWorkout = workouts.find(w => w.date === selectedDate);
-        return selectedWorkout ? <WorkoutDetails 
+        return <WorkoutDetails 
           workout={selectedWorkout}
           date={selectedDate}
           workouts={workouts}
           onEdit={() => { setEditingWorkout(selectedWorkout); handleSetView('add'); }}
           onDelete={() => handleDeleteWorkout(selectedWorkout.id)}
-        /> : null;
+        />;
       case 'progress':
         return <ProgressCharts workouts={workouts} />;
       
       case 'library':
         return <ExerciseLibrary 
             onExerciseSelect={handleAddExerciseFromLibrary}
+            allExercises={allLibraryExercises}
+            favoriteExercises={favoriteExercises}
+            onToggleFavorite={toggleFavoriteExercise}
         />;
       default: return null;
     }

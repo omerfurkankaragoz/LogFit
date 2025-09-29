@@ -1,8 +1,8 @@
 // src/components/CreateRoutine.tsx
 import React, { useState, useEffect, useMemo } from 'react';
-import { Save, Plus, Trash2, Search, X, GripVertical } from 'lucide-react';
+import { Save, Plus, Trash2, Search, X, GripVertical, Star } from 'lucide-react';
 import { Routine } from './RoutinesList';
-import { getAllExercises, getBodyParts, Exercise as LibraryExercise } from '../services/exerciseApi';
+import { Exercise as LibraryExercise } from '../services/exerciseApi';
 import {
   DndContext,
   closestCenter,
@@ -25,7 +25,6 @@ import { CSS } from '@dnd-kit/utilities';
 const SUPABASE_PROJECT_URL = 'https://ekrhekungvoisfughwuz.supabase.co';
 const BUCKET_NAME = 'images';
 
-// Sürüklenebilir her bir egzersiz öğesi için ayrı bir bileşen
 function SortableExercise({ id, name, onRemove }: { id: string; name: string; onRemove: (id: string) => void; }) {
   const {
     attributes,
@@ -60,48 +59,38 @@ function SortableExercise({ id, name, onRemove }: { id: string; name: string; on
   );
 }
 
-
 interface CreateRoutineProps {
-  existingRoutine: Partial<Routine> | null; // Tip Partial<Routine> olarak güncellendi
+  existingRoutine: Partial<Routine> | null;
   onSaveRoutine: (id: string | null, name: string, exercises: { id: string; name: string; bodyPart?: string }[]) => void;
   onCancel: () => void;
+  allLibraryExercises: LibraryExercise[];
+  favoriteExercises: string[];
 }
 
-const CreateRoutine: React.FC<CreateRoutineProps> = ({ existingRoutine, onSaveRoutine, onCancel }) => {
+const CreateRoutine: React.FC<CreateRoutineProps> = ({ existingRoutine, onSaveRoutine, onCancel, allLibraryExercises, favoriteExercises }) => {
   const [routineName, setRoutineName] = useState('');
   const [selectedExercises, setSelectedExercises] = useState<{ id: string; name: string; bodyPart?: string }[]>([]);
   const [manualExerciseName, setManualExerciseName] = useState('');
-
-  // Library States
-  const [allLibraryExercises, setAllLibraryExercises] = useState<LibraryExercise[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [bodyParts, setBodyParts] = useState<string[]>([]);
 
   const [showLargeImage, setShowLargeImage] = useState(false);
   const [currentLargeImageUrl, setCurrentLargeImageUrl] = useState<string | null>(null);
 
+  const favoriteLibraryExercises = useMemo(() => {
+    const selectedExerciseNames = new Set(selectedExercises.map(ex => ex.name.toLowerCase()));
+    return allLibraryExercises
+      .filter(ex => favoriteExercises.includes(ex.id))
+      .filter(ex => !selectedExerciseNames.has(ex.name.toLowerCase()));
+  }, [allLibraryExercises, favoriteExercises, selectedExercises]);
+
+
   const sensors = useSensors(
     useSensor(PointerSensor),
-    useSensor(TouchSensor), // Mobil cihazlar için
+    useSensor(TouchSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
-
-  useEffect(() => {
-    const fetchInitialData = async () => {
-      setLoading(true);
-      const [parts, exercises] = await Promise.all([
-        getBodyParts(),
-        getAllExercises()
-      ]);
-      setBodyParts(parts);
-      setAllLibraryExercises(exercises);
-      setLoading(false);
-    };
-    fetchInitialData();
-  }, []);
 
   useEffect(() => {
     if (existingRoutine) {
@@ -184,12 +173,6 @@ const CreateRoutine: React.FC<CreateRoutineProps> = ({ existingRoutine, onSaveRo
     return `${SUPABASE_PROJECT_URL}/storage/v1/object/public/${BUCKET_NAME}/exercises/${imagePath}`;
   };
 
-  const getBodyPartName = (bodyPart: string) => {
-    if (!bodyPart) return '';
-    const names: { [key: string]: string } = { 'chest': 'Göğüs', 'back': 'Sırt', 'shoulders': 'Omuz', 'waist': 'Karın', 'cardio': 'Kardiyo', 'neck': 'Boyun', 'lower arms': 'Ön Kol', 'upper arms': 'Pazu/Arka Kol', 'lower legs': 'Alt Bacak', 'upper legs': 'Üst Bacak', 'abdominals': 'Karın' };
-    return names[bodyPart.toLowerCase()] || bodyPart.charAt(0).toUpperCase() + bodyPart.slice(1);
-  };
-
   const handleImageClick = (imageUrl: string) => {
     setCurrentLargeImageUrl(imageUrl);
     setShowLargeImage(true);
@@ -232,6 +215,24 @@ const CreateRoutine: React.FC<CreateRoutineProps> = ({ existingRoutine, onSaveRo
       <div className="space-y-4 pt-6 mt-6 bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-100 dark:border-gray-700">
         <h3 className="font-semibold text-lg text-gray-800 dark:text-gray-100 mb-4">Hareket Ekle</h3>
         
+        {favoriteLibraryExercises.length > 0 && !searchQuery.trim() && (
+            <div className="border-b border-gray-200 dark:border-gray-700 pb-4">
+                <h4 className="font-semibold text-md text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+                    <Star size={18} className="text-yellow-400"/> Favorilerden Ekle
+                </h4>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {favoriteLibraryExercises.map(exercise => (
+                        <button key={exercise.id} onClick={() => handleAddExerciseFromLibrary(exercise)} className="w-full text-left bg-gray-50 dark:bg-gray-700 rounded-xl p-3 shadow-sm hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                            <div className="flex items-center gap-3">
+                                <img src={getImageUrl(exercise.gifUrl)} alt={exercise.name} className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
+                                <p className="flex-1 font-medium text-gray-800 dark:text-gray-200 text-sm">{exercise.name}</p>
+                            </div>
+                        </button>
+                    ))}
+                </div>
+            </div>
+        )}
+
         <div>
             <label className="text-md font-medium text-gray-600 dark:text-gray-400 mb-1 block">Manuel Olarak Ekle</label>
             <div className="flex gap-3 mt-1">
@@ -255,30 +256,24 @@ const CreateRoutine: React.FC<CreateRoutineProps> = ({ existingRoutine, onSaveRo
                 <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Hareket ara..." className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base" />
             </div>
         </div>
-
-        {loading ? (
-            <div className="flex items-center justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>
-        ) : (
+        
+        {searchQuery.trim() && (
             <div className="space-y-3 max-h-[50vh] overflow-y-auto p-1 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
-            {filteredLibraryExercises.length > 0 ? filteredLibraryExercises.map(exercise => (
-              <div key={exercise.id} className="bg-gray-50 dark:bg-gray-700 rounded-xl p-3 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-shadow transform hover:scale-[1.01] active:scale-[0.99]">
-                <div className="flex items-center gap-3">
-                  <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-600 flex-shrink-0 cursor-pointer shadow-sm"
-                       onClick={() => handleImageClick(getImageUrl(exercise.gifUrl))}>
-                    <img src={getImageUrl(exercise.gifUrl)} alt={exercise.name} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.src = 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop'; }}/>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-base text-gray-800 dark:text-gray-200 truncate">{exercise.name}</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">{getBodyPartName(exercise.bodyPart)}</p>
-                  </div>
-                  <button onClick={() => handleAddExerciseFromLibrary(exercise)} className="p-2 bg-blue-100 text-blue-600 rounded-xl hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-300 transition-colors active:scale-95 shadow-sm flex-shrink-0">
-                    <Plus size={20} />
-                  </button>
-                </div>
-              </div>
-            )) : (
-              <p className="text-md text-center text-gray-500 dark:text-gray-400 py-4">Aradığınız hareket bulunamadı veya zaten rutininizde mevcut.</p>
-            )}
+                {filteredLibraryExercises.length > 0 ? filteredLibraryExercises.map(exercise => (
+                <button key={exercise.id} onClick={() => handleAddExerciseFromLibrary(exercise)} className="w-full text-left bg-gray-50 dark:bg-gray-700 rounded-xl p-3 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-shadow transform hover:scale-[1.01] active:scale-[0.99]">
+                    <div className="flex items-center gap-3">
+                    <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-600 flex-shrink-0 cursor-pointer shadow-sm"
+                        onClick={(e) => { e.stopPropagation(); handleImageClick(getImageUrl(exercise.gifUrl)); }}>
+                        <img src={getImageUrl(exercise.gifUrl)} alt={exercise.name} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.src = 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop'; }}/>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-base text-gray-800 dark:text-gray-200 truncate">{exercise.name}</p>
+                    </div>
+                    </div>
+                </button>
+                )) : (
+                <p className="text-md text-center text-gray-500 dark:text-gray-400 py-4">Aradığınız hareket bulunamadı veya zaten rutininizde mevcut.</p>
+                )}
             </div>
         )}
       </div>
