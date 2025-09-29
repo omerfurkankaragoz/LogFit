@@ -25,6 +25,8 @@ const mapSupabaseToExercise = (data: any): Exercise => {
   };
 };
 
+const COLUMNS_TO_SELECT = 'id, name, body_part, equipment, gif_url, target_muscle, instructions';
+
 /**
  * Supabase veritabanından TÜM egzersizleri çeker.
  */
@@ -32,8 +34,8 @@ export const getAllExercises = async (): Promise<Exercise[]> => {
   try {
     const { data, error } = await supabase
       .from('exercises_library')
-      .select('*')
-      .order('name', { ascending: true }); // İsimlerine göre sıralı getirelim
+      .select(COLUMNS_TO_SELECT) // DEĞİŞİKLİK: Sütunlar açıkça belirtildi
+      .order('name', { ascending: true }); 
 
     if (error) {
       console.error('Supabase getAllExercises hatası:', error);
@@ -60,10 +62,10 @@ export const searchExercisesByName = async (name: string): Promise<Exercise[]> =
 
   try {
     const { data, error } = await supabase
-      .from('exercises_library') // Tablo adını güncelledik
-      .select('*')
+      .from('exercises_library') 
+      .select(COLUMNS_TO_SELECT) // DEĞİŞİKLİK: Sütunlar açıkça belirtildi
       .ilike('name', `%${name}%`)
-      .limit(50); // Sonuçları limitliyoruz
+      .limit(50); 
 
     if (error) {
       console.error('Supabase arama hatası:', error);
@@ -88,8 +90,8 @@ export const getExercisesByBodyPart = async (bodyPart: string): Promise<Exercise
 
   try {
     const { data, error } = await supabase
-        .from('exercises_library') // Tablo adını güncelledik
-        .select('*')
+        .from('exercises_library')
+        .select(COLUMNS_TO_SELECT) // DEĞİŞİKLİK: Sütunlar açıkça belirtildi
         .eq('body_part', bodyPart)
         .limit(200);
 

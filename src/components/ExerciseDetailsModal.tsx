@@ -49,6 +49,17 @@ const ExerciseDetailsModal: React.FC<ExerciseDetailsModalProps> = ({ exercise, o
                 <p className="font-semibold text-system-label">{exercise.equipment}</p>
             </div>
           </div>
+
+          {exercise.instructions && exercise.instructions.length > 0 && (
+            <div className="bg-system-background-tertiary rounded-xl p-4">
+              <h2 className="font-semibold text-system-label mb-2">Talimatlar</h2>
+              <ul className="space-y-2 list-decimal list-inside text-system-label-secondary">
+                {exercise.instructions.map((instruction, index) => (
+                  <li key={index} className="text-sm">{instruction}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
         
         <div className="flex-shrink-0 p-4 border-t border-system-separator bg-system-background-secondary">
