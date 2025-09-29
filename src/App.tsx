@@ -1,7 +1,7 @@
 // src/App.tsx
 
 import React, { useState, useEffect } from 'react';
-import { Calendar, User,Radar,LibraryBig,LineChartIcon } from 'lucide-react';
+import { Calendar, Dumbbell, BarChart3, BookOpen, User } from 'lucide-react';
 import WorkoutCalendar from './components/WorkoutCalendar';
 import AddWorkout from './components/AddWorkout';
 import WorkoutDetails from './components/WorkoutDetails';
@@ -211,9 +211,9 @@ function App() {
   const renderBottomNav = () => {
     const navItems = [
       { view: 'calendar', icon: Calendar, label: 'Takvim' },
-      { view: 'routines', icon: Radar, label: 'Rutinler' },
-      { view: 'library', icon: LibraryBig, label: 'Kütüphane' },
-      { view: 'progress', icon: LineChartIcon, label: 'İlerleme' },
+      { view: 'routines', icon: Dumbbell, label: 'Rutinler' },
+      { view: 'library', icon: BookOpen, label: 'Kütüphane' },
+      { view: 'progress', icon: BarChart3, label: 'İlerleme' },
       { view: 'profile', icon: User, label: 'Profil' },
     ];
     return (
@@ -231,16 +231,27 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-system-background">
-      {/* Header kaldırıldı. Bunun yerine main elementine üstten boşluk ekleniyor.
-        Bu, iOS'teki durum çubuğu ve çentik (safe area) ile doğru entegrasyonu sağlar.
+    <div className="min-h-screen bg-system-background flex flex-col max-w-md mx-auto">
+      {/* DEĞİŞİKLİK: 
+        Sabit bir header alanı oluşturuyoruz. Bu alan, iOS'teki "safe area" boşluğunu dolduracak.
+        Arka plan rengi, uygulamanın ana arka planıyla aynı olacak.
       */}
-      <main className="max-w-md mx-auto pb-24 pt-[env(safe-area-inset-top)]">
+      <header className="sticky top-0 z-10 bg-system-background w-full">
+        <div className="h-[env(safe-area-inset-top)]"></div>
+      </header>
+      
+      {/* DEĞİŞİKLİK: 
+        Ana içerik artık header'dan sonra başlıyor ve padding'e ihtiyacı yok.
+        flex-1 ve overflow-y-auto ile kendi içinde kaydırılabilir hale geliyor.
+      */}
+      <main className="flex-1 overflow-y-auto pb-24">
         {renderContent()}
       </main>
+
       {renderBottomNav()}
     </div>
   );
 }
 
 export default App;
+
