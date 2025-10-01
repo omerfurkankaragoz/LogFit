@@ -190,108 +190,113 @@ const CreateRoutine: React.FC<CreateRoutineProps> = ({ existingRoutine, onSaveRo
   );
 
   return (
-    <div className="p-4 space-y-6">
-      {/* Sayfa Başlığı ve Butonlar */}
-      <div className="flex justify-between items-center pt-4">
-        <button onClick={onCancel} className="text-system-blue text-lg">İptal</button>
-        <h1 className="text-xl font-bold text-system-label">{existingRoutine?.id ? 'Rutini Düzenle' : 'Yeni Rutin'}</h1>
-        <button onClick={handleSave} disabled={isSaveDisabled} className="text-system-blue text-lg font-bold disabled:text-system-label-tertiary transition-colors">{existingRoutine?.id ? 'Bitti' : 'Ekle'}</button>
+    <div>
+      {/* BAŞLIK BÖLÜMÜ - SABİT */}
+      <div className="sticky top-[env(safe-area-inset-top)] z-10 bg-system-background/100 backdrop-blur-md border-b border-system-separator">
+        <div className="flex justify-between items-center p-4">
+            <button onClick={onCancel} className="text-system-blue text-lg">İptal</button>
+            <h1 className="text-xl font-bold text-system-label">{existingRoutine?.id ? 'Rutini Düzenle' : 'Yeni Rutin'}</h1>
+            <button onClick={handleSave} disabled={isSaveDisabled} className="text-system-blue text-lg font-bold disabled:text-system-label-tertiary transition-colors">{existingRoutine?.id ? 'Bitti' : 'Ekle'}</button>
+        </div>
       </div>
 
-      {/* Rutin Adı Kartı */}
-      <div className="bg-system-background-secondary rounded-xl p-4">
-        <input 
-          type="text" 
-          value={routineName} 
-          onChange={(e) => setRoutineName(e.target.value)} 
-          placeholder="Rutin Adı" 
-          className="w-full bg-transparent text-system-label text-lg placeholder:text-system-label-tertiary focus:outline-none" 
-        />
-      </div>
+      {/* İÇERİK BÖLÜMÜ - KAYDIRILABİLİR */}
+      <div className="p-4 space-y-6">
+        {/* Rutin Adı Kartı */}
+        <div className="bg-system-background-secondary rounded-xl p-4">
+          <input 
+            type="text" 
+            value={routineName} 
+            onChange={(e) => setRoutineName(e.target.value)} 
+            placeholder="Rutin Adı" 
+            className="w-full bg-transparent text-system-label text-lg placeholder:text-system-label-tertiary focus:outline-none" 
+          />
+        </div>
 
-      {/* Seçilen Hareketler Kartı */}
-      <div className="bg-system-background-secondary rounded-xl overflow-hidden">
-        <p className="text-system-label-secondary px-4 pt-4 pb-2 text-sm">HAREKETLER</p>
-        <DndContext 
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext 
-            items={selectedExercises}
-            strategy={verticalListSortingStrategy}
+        {/* Seçilen Hareketler Kartı */}
+        <div className="bg-system-background-secondary rounded-xl overflow-hidden">
+          <p className="text-system-label-secondary px-4 pt-4 pb-2 text-sm">HAREKETLER</p>
+          <DndContext 
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
           >
-            <div className="divide-y divide-system-separator">
-              {selectedExercises.length > 0 ? selectedExercises.map(ex => 
-                  <SortableExercise key={ex.id} id={ex.id} name={ex.name} onRemove={handleRemoveExercise} />
+            <SortableContext 
+              items={selectedExercises}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="divide-y divide-system-separator">
+                {selectedExercises.length > 0 ? selectedExercises.map(ex => 
+                    <SortableExercise key={ex.id} id={ex.id} name={ex.name} onRemove={handleRemoveExercise} />
+                ) : (
+                    <p className="text-md text-center text-system-label-secondary py-10 px-4">Bu rutine hareket ekleyin.</p>
+                )}
+              </div>
+            </SortableContext>
+          </DndContext>
+        </div>
+
+        {/* Hareket Ekleme Kartı */}
+        <div className="bg-system-background-secondary rounded-xl divide-y divide-system-separator">
+            <div className="p-4">
+              <h3 className="text-lg font-semibold text-system-label mb-3">Hareket Ekle</h3>
+              
+              {/* Manuel Ekleme */}
+              <div className="flex gap-2 mb-3">
+                  <input 
+                      type="text" 
+                      value={manualExerciseName} 
+                      onChange={(e) => setManualExerciseName(e.target.value)} 
+                      placeholder="Manuel Hareket Adı" 
+                      className="flex-grow px-3 py-2 bg-system-background-tertiary text-system-label rounded-lg focus:outline-none focus:ring-2 focus:ring-system-blue" 
+                  />
+                  <button 
+                      onClick={handleManualAddExercise}
+                      disabled={!manualExerciseName.trim()}
+                      className="p-2 bg-system-blue rounded-lg text-white disabled:bg-system-fill transition-colors"
+                  >
+                      <Plus size={20} />
+                  </button>
+              </div>
+
+              {/* Kütüphane Arama */}
+              <div className="relative">
+                  <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-system-label-tertiary" />
+                  <input 
+                    type="text" 
+                    value={searchQuery} 
+                    onChange={(e) => setSearchQuery(e.target.value)} 
+                    placeholder="Kütüphaneden Ara" 
+                    className="w-full pl-10 pr-4 py-2 bg-system-background-tertiary text-system-label rounded-lg focus:outline-none focus:ring-2 focus:ring-system-blue" 
+                  />
+              </div>
+            </div>
+            
+            <div className="max-h-[50vh] overflow-y-auto scrollbar-thin">
+              {searchQuery.trim() ? (
+                searchedExercises.length > 0 ? searchedExercises.map(exercise => (
+                  <ExerciseListItem key={exercise.id} exercise={exercise} onClick={handleAddExerciseFromLibrary} />
+                )) : <p className="text-md text-center text-system-label-secondary py-10 px-4">Sonuç bulunamadı.</p>
               ) : (
-                  <p className="text-md text-center text-system-label-secondary py-10 px-4">Bu rutine hareket ekleyin.</p>
+                <>
+                  {favoriteLibraryExercises.length > 0 && (
+                      <div>
+                          <p className="text-system-label-secondary px-4 pt-4 pb-2 text-sm font-bold">FAVORİLER</p>
+                          {favoriteLibraryExercises.map(exercise => (
+                              <ExerciseListItem key={exercise.id} exercise={exercise} isFavorite onClick={handleAddExerciseFromLibrary} />
+                          ))}
+                      </div>
+                  )}
+                  <div>
+                      <p className="text-system-label-secondary px-4 pt-4 pb-2 text-sm font-bold">TÜM HAREKETLER</p>
+                      {otherLibraryExercises.map(exercise => (
+                          <ExerciseListItem key={exercise.id} exercise={exercise} onClick={handleAddExerciseFromLibrary} />
+                      ))}
+                  </div>
+                </>
               )}
             </div>
-          </SortableContext>
-        </DndContext>
-      </div>
-
-      {/* Hareket Ekleme Kartı */}
-      <div className="bg-system-background-secondary rounded-xl divide-y divide-system-separator">
-          <div className="p-4">
-            <h3 className="text-lg font-semibold text-system-label mb-3">Hareket Ekle</h3>
-            
-            {/* Manuel Ekleme */}
-            <div className="flex gap-2 mb-3">
-                <input 
-                    type="text" 
-                    value={manualExerciseName} 
-                    onChange={(e) => setManualExerciseName(e.target.value)} 
-                    placeholder="Manuel Hareket Adı" 
-                    className="flex-grow px-3 py-2 bg-system-background-tertiary text-system-label rounded-lg focus:outline-none focus:ring-2 focus:ring-system-blue" 
-                />
-                <button 
-                    onClick={handleManualAddExercise}
-                    disabled={!manualExerciseName.trim()}
-                    className="p-2 bg-system-blue rounded-lg text-white disabled:bg-system-fill transition-colors"
-                >
-                    <Plus size={20} />
-                </button>
-            </div>
-
-            {/* Kütüphane Arama */}
-            <div className="relative">
-                <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-system-label-tertiary" />
-                <input 
-                  type="text" 
-                  value={searchQuery} 
-                  onChange={(e) => setSearchQuery(e.target.value)} 
-                  placeholder="Kütüphaneden Ara" 
-                  className="w-full pl-10 pr-4 py-2 bg-system-background-tertiary text-system-label rounded-lg focus:outline-none focus:ring-2 focus:ring-system-blue" 
-                />
-            </div>
-          </div>
-          
-          <div className="max-h-[50vh] overflow-y-auto scrollbar-thin">
-            {searchQuery.trim() ? (
-              searchedExercises.length > 0 ? searchedExercises.map(exercise => (
-                <ExerciseListItem key={exercise.id} exercise={exercise} onClick={handleAddExerciseFromLibrary} />
-              )) : <p className="text-md text-center text-system-label-secondary py-10 px-4">Sonuç bulunamadı.</p>
-            ) : (
-              <>
-                {favoriteLibraryExercises.length > 0 && (
-                    <div>
-                        <p className="text-system-label-secondary px-4 pt-4 pb-2 text-sm font-bold">FAVORİLER</p>
-                        {favoriteLibraryExercises.map(exercise => (
-                            <ExerciseListItem key={exercise.id} exercise={exercise} isFavorite onClick={handleAddExerciseFromLibrary} />
-                        ))}
-                    </div>
-                )}
-                <div>
-                    <p className="text-system-label-secondary px-4 pt-4 pb-2 text-sm font-bold">TÜM HAREKETLER</p>
-                    {otherLibraryExercises.map(exercise => (
-                        <ExerciseListItem key={exercise.id} exercise={exercise} onClick={handleAddExerciseFromLibrary} />
-                    ))}
-                </div>
-              </>
-            )}
-          </div>
+        </div>
       </div>
     </div>
   );

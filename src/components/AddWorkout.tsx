@@ -1,4 +1,5 @@
 // src/components/AddWorkout.tsx
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Plus, Trash2, BookCopy, Search, X, Star, Repeat, Radar, BadgePlus } from 'lucide-react';
 import { format } from 'date-fns';
@@ -29,13 +30,11 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
   const [showLargeImage, setShowLargeImage] = useState(false);
   const [currentLargeImageUrl, setCurrentLargeImageUrl] = useState<string | null>(null);
   
-  // Antrenmana eklenmiş olan hareketlerin isimlerini küçük harfle bir sette topluyoruz.
   const workoutExerciseNames = useMemo(() => 
     new Set(workoutExercises.map(ex => ex.name.toLowerCase())),
     [workoutExercises]
   );
   
-  // Favori hareketleri ve diğer hareketleri ayırıyoruz.
   const [favoriteLibraryExercises, otherLibraryExercises] = useMemo(() => {
     const favorites: LibraryExercise[] = [];
     const others: LibraryExercise[] = [];
@@ -53,7 +52,6 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
     return [favorites, others];
   }, [allLibraryExercises, favoriteExercises, workoutExerciseNames]);
 
-  // Arama sonuçlarını hesaplıyoruz.
   const searchedExercises = useMemo(() => {
     if (!searchQuery.trim()) return [];
     return allLibraryExercises.filter(ex => 
@@ -87,7 +85,7 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
       id: `lib-${exercise.id}-${Date.now()}`,
       name: exercise.name,
       bodyPart: exercise.bodyPart,
-      sets: [{ reps: 0, weight: 0 }]
+      sets: []
     };
     setWorkoutExercises(prev => [newExercise, ...prev]);
     setSearchQuery('');
@@ -102,7 +100,7 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
           id: `routine-${routineExercise.id}-${Date.now() + index}`,
           name: routineExercise.name,
           bodyPart: routineExercise.bodyPart || libraryMatch?.bodyPart,
-          sets: [{ reps: 0, weight: 0 }]
+          sets: []
         };
       });
     if (newExercisesFromRoutine.length > 0) {
@@ -112,7 +110,7 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
   };
 
   const addManualExercise = () => {
-    const newExercise: Exercise = { id: `manual-${Date.now()}`, name: '', sets: [{ reps: 0, weight: 0 }] };
+    const newExercise: Exercise = { id: `manual-${Date.now()}`, name: '', sets: [] };
     setWorkoutExercises(prev => [newExercise, ...prev]);
   };
 
@@ -125,7 +123,7 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
   const addSet = (exerciseId: string) => {
     setWorkoutExercises(prev => prev.map(ex => {
       if (ex.id === exerciseId) {
-        const lastSet = ex.sets.length > 0 ? ex.sets[ex.sets.length - 1] : { reps: 8, weight: 20 };
+        const lastSet = ex.sets.length > 0 ? ex.sets[ex.sets.length - 1] : { reps: 0, weight: 0 };
         return { ...ex, sets: [...ex.sets, { ...lastSet }] };
       }
       return ex;
@@ -141,7 +139,12 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
   };
 
   const handleSave = () => {
-    const exercisesToSave = workoutExercises.filter(ex => ex.name.trim() && ex.sets.length > 0).map(ex => ({ ...ex, sets: ex.sets.filter(set => set.reps > 0 || set.weight > 0) }));
+    const exercisesToSave = workoutExercises
+      .filter(ex => ex.name.trim()) 
+      .map(ex => ({ 
+        ...ex, 
+        sets: ex.sets.filter(set => set.reps > 0 || set.weight > 0) 
+    }));
     onSave({ date, exercises: exercisesToSave });
   };
 
@@ -251,28 +254,30 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
                 </button>
             </div>
 
-            <div className="px-4 pb-2">
-              <div className="grid grid-cols-[1fr,1fr,1fr,auto] gap-x-3 gap-y-2 text-sm text-center">
-                <p className="text-system-label-secondary">Önceki</p>
-                <p className="text-system-label-secondary">Kg</p>
-                <p className="text-system-label-secondary">Tekrar</p>
-                <div className="w-8"></div>
+            {exercise.sets.length > 0 && (
+                <div className="px-4 pb-2">
+                    <div className="grid grid-cols-[1fr,1fr,1fr,auto] gap-x-3 gap-y-2 text-sm text-center">
+                        <p className="text-system-label-secondary">Önceki</p>
+                        <p className="text-system-label-secondary">Kg</p>
+                        <p className="text-system-label-secondary">Tekrar</p>
+                        <div className="w-8"></div>
 
-                {exercise.sets.map((set, setIndex) => {
-                  const previousSet = previousExercise?.sets[setIndex];
-                  return (
-                    <React.Fragment key={setIndex}>
-                      <div className="bg-system-background-tertiary rounded-md flex items-center justify-center h-10 text-system-label-secondary">{previousSet ? `${previousSet.weight}kg x ${previousSet.reps}` : '-'}</div>
-                      <input type="number" inputMode="decimal" value={set.weight || ''} onChange={(e) => updateSet(exercise.id, setIndex, 'weight', parseFloat(e.target.value) || 0)} placeholder="0" className="w-full h-10 bg-system-background-tertiary text-system-label text-center rounded-md focus:outline-none focus:ring-2 focus:ring-system-blue" />
-                      <input type="number" inputMode="numeric" value={set.reps || ''} onChange={(e) => updateSet(exercise.id, setIndex, 'reps', parseInt(e.target.value) || 0)} placeholder="0" className="w-full h-10 bg-system-background-tertiary text-system-label text-center rounded-md focus:outline-none focus:ring-2 focus:ring-system-blue" />
-                      <button onClick={() => removeSet(exercise.id, setIndex)} className="h-10 flex items-center justify-center text-system-label-tertiary">
-                        <Trash2 size={18}/>
-                      </button>
-                    </React.Fragment>
-                  );
-                })}
-              </div>
-            </div>
+                        {exercise.sets.map((set, setIndex) => {
+                        const previousSet = previousExercise?.sets[setIndex];
+                        return (
+                            <React.Fragment key={setIndex}>
+                            <div className="bg-system-background-tertiary rounded-md flex items-center justify-center h-10 text-system-label-secondary">{previousSet ? `${previousSet.weight}kg x ${previousSet.reps}` : '-'}</div>
+                            <input type="number" inputMode="decimal" value={set.weight || ''} onChange={(e) => updateSet(exercise.id, setIndex, 'weight', parseFloat(e.target.value) || 0)} placeholder="0" className="w-full h-10 bg-system-background-tertiary text-system-label text-center rounded-md focus:outline-none focus:ring-2 focus:ring-system-blue" />
+                            <input type="number" inputMode="numeric" value={set.reps || ''} onChange={(e) => updateSet(exercise.id, setIndex, 'reps', parseInt(e.target.value) || 0)} placeholder="0" className="w-full h-10 bg-system-background-tertiary text-system-label text-center rounded-md focus:outline-none focus:ring-2 focus:ring-system-blue" />
+                            <button onClick={() => removeSet(exercise.id, setIndex)} className="h-10 flex items-center justify-center text-system-label-tertiary">
+                                <Trash2 size={18}/>
+                            </button>
+                            </React.Fragment>
+                        );
+                        })}
+                    </div>
+                </div>
+            )}
             <button onClick={() => addSet(exercise.id)} className="w-full p-3 text-system-blue text-center font-medium border-t border-system-separator hover:bg-system-fill-tertiary transition-colors">
               Set Ekle
             </button>
@@ -283,14 +288,17 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
   );
 
   return (
-    <>
-      <div className="p-4 space-y-6">
-        <div className="flex justify-between items-center pt-4">
+    <div>
+      {/* BAŞLIK BÖLÜMÜ - EKRANIN ÜSTÜNE SABİTLENDİ */}
+      <div className="sticky top-[env(safe-area-inset-top)] z-10 bg-system-background/100 backdrop-blur-md border-b border-system-separator">
+        <div className="flex justify-between items-center p-4">
           <button onClick={onCancel} className="text-system-blue text-lg">İptal</button>
-          <h1 className="text-xl font-bold text-system-label capitalize">{format(new Date(date), 'dd MMMM', { locale: tr })}</h1>
           <button onClick={handleSave} className="text-system-blue text-lg font-bold">Kaydet</button>
         </div>
-        
+      </div>
+
+      {/* İÇERİK BÖLÜMÜ - KAYDIRILABİLİR ALAN */}
+      <div className="p-4 space-y-6">
         {workoutExercises.length > 0 && (
           <>
             <p className="text-system-label-secondary px-4 pt-4 pb-2 text-sm font-bold">ANTRENMAN</p>
@@ -299,18 +307,19 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
         )}
         
         <div className="space-y-4">{AddExerciseSection}</div>
-        
-        {showLargeImage && currentLargeImageUrl && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4" onClick={closeLargeImage}>
-            <div className="relative bg-system-background-secondary rounded-2xl p-2 max-w-full max-h-full overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
-              <button onClick={closeLargeImage} className="absolute top-3 right-3 text-white bg-black/50 rounded-full p-1 z-10">
-                <X size={24} />
-              </button>
-              <img src={currentLargeImageUrl} alt="Büyük Egzersiz Görseli" className="max-w-[80vw] max-h-[80vh] object-contain mx-auto rounded-xl"/>
-            </div>
-          </div>
-        )}
       </div>
+      
+      {/* MODALLAR */}
+      {showLargeImage && currentLargeImageUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4" onClick={closeLargeImage}>
+          <div className="relative bg-system-background-secondary rounded-2xl p-2 max-w-full max-h-full overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <button onClick={closeLargeImage} className="absolute top-3 right-3 text-white bg-black/50 rounded-full p-1 z-10">
+              <X size={24} />
+            </button>
+            <img src={currentLargeImageUrl} alt="Büyük Egzersiz Görseli" className="max-w-[80vw] max-h-[80vh] object-contain mx-auto rounded-xl"/>
+          </div>
+        </div>
+      )}
 
       {isRoutinePickerOpen && (
         <div className="fixed inset-0 z-40 flex items-end justify-center">
@@ -331,7 +340,7 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
             </div>
         </div>
       )}
-    </>
+    </div>
   );
 };
 

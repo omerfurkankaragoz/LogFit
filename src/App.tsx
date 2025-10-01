@@ -1,7 +1,6 @@
 // src/App.tsx
 
 import React, { useState, useEffect } from 'react';
-// DEĞİŞİKLİK: İkonlar güncellendi
 import { Calendar, Radar, LibraryBig, LineChart, User } from 'lucide-react'; 
 import WorkoutCalendar from './components/WorkoutCalendar';
 import AddWorkout from './components/AddWorkout';
@@ -210,7 +209,6 @@ function App() {
   };
 
   const renderBottomNav = () => {
-    // DEĞİŞİKLİK: navItems array'i yeni ikonlarla güncellendi
     const navItems = [
       { view: 'calendar', icon: Calendar, label: 'Takvim' },
       { view: 'routines', icon: Radar, label: 'Rutinler' },
@@ -238,7 +236,8 @@ function App() {
         <div className="h-[env(safe-area-inset-top)]"></div>
       </header>
       
-      <main className="flex-1 overflow-y-auto pb-24">
+      {/* DEĞİŞİKLİK BURADA: overflow-y-auto kaldırıldı */}
+      <main className="flex-1 pb-24">
         {renderContent()}
       </main>
 
