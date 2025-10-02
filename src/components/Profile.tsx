@@ -192,7 +192,7 @@ const Profile: React.FC<ProfileProps> = ({ session, onLogout }) => {
                     <div className="w-1/4 bg-system-green"></div>
                     <div className="w-1/4 bg-system-yellow"></div>
                     <div className="w-1/4 bg-system-red"></div>
-                    {bmi && ( <div className="absolute h-full flex items-center" style={{ left: `calc(${Math.min(100, (bmi/40)*100)}% - 2px)` }}> <div className="w-1 h-4 bg-white rounded-full shadow-lg border-2 border-system-background-secondary"></div> </div> )}
+                    {bmi && ( <div className="absolute h-full flex items-center" style={{ left: `calc(${Math.min(100, (bmi/40)*100)}% - 2px)` }}> <div className="w-2 h-4 bg-white rounded-full shadow-lg border-2 border-system-background-secondary"></div> </div> )}
                 </div>
                 {chartData.length > 0 && (
                     <div className="h-64 w-full pt-4 pb-4">
