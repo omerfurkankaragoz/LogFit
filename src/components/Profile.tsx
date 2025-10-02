@@ -51,6 +51,23 @@ const Profile: React.FC<ProfileProps> = ({ session, onLogout }) => {
   const bmi = useMemo(() => calculateBMI(typeof weight === 'number' ? weight : null, typeof height === 'number' ? height : null), [weight, height]);
   const bmiInfo = getBMICategory(bmi);
 
+  const bmiPercent = useMemo(() => {
+    if (bmi === null) return 0;
+    let position = 0;
+    if (bmi < 18.5) {
+        const min = 15;
+        position = ((bmi - min) / (18.5 - min)) * 25;
+    } else if (bmi < 25) {
+        position = 25 + ((bmi - 18.5) / (25 - 18.5)) * 25;
+    } else if (bmi < 30) {
+        position = 50 + ((bmi - 25) / (30 - 25)) * 25;
+    } else {
+        const max = 40;
+        position = 75 + ((bmi - 30) / (max - 30)) * 25;
+    }
+    return Math.max(0, Math.min(100, position));
+  }, [bmi]);
+
   const chartData = useMemo(() => {
     const latestMeasurementsByDay: { [key: string]: Measurement } = {};
     measurements.forEach(m => {
@@ -154,8 +171,42 @@ const Profile: React.FC<ProfileProps> = ({ session, onLogout }) => {
     }
   };
   
-  const renderInfoRow = (label: string, value: string | number | null, unit: string = '') => ( <div className="flex justify-between items-center"> <span className="text-system-label-secondary">{label}</span> <span className="text-system-label font-medium">{value || '-'} {value ? unit : ''}</span> </div> );
-  const renderEditRow = (label: string, value: string | number, onChange: (val: any) => void, type: string = 'text', placeholder: string = '') => ( <div className="flex justify-between items-center"> <span className="text-system-label-secondary">{label}</span> <input type={type} value={value} onChange={(e) => onChange(type === 'number' ? (e.target.value === '' ? '' : Number(e.target.value)) : e.target.value)} placeholder={placeholder} className="w-1/2 bg-transparent text-system-label text-right font-medium focus:outline-none" /> </div> );
+  const renderInfoRow = (label: string, value: string | number | null) => ( 
+    <div className="flex justify-between items-center"> 
+      <span className="text-system-label-secondary">{label}</span> 
+      <span className="text-system-label font-medium">{value || '-'}</span> 
+    </div> 
+  );
+  
+  const renderEditRow = (label: string, value: string | number, onChange: (val: any) => void, type: string = 'text', placeholder: string = '') => {
+    const handleClear = () => {
+        onChange(type === 'number' ? '' : '');
+    };
+
+    return (
+        <div className="flex justify-between items-center">
+            <span className="text-system-label-secondary">{label}</span>
+            <div className="relative w-1/2">
+                <input
+                    type={type}
+                    value={value}
+                    onChange={(e) => onChange(type === 'number' ? (e.target.value === '' ? '' : Number(e.target.value)) : e.target.value)}
+                    placeholder={placeholder}
+                    className="w-full bg-system-background-tertiary text-system-label font-medium rounded-md px-3 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-system-blue text-left"
+                />
+                {String(value).length > 0 && (
+                    <button
+                        onClick={handleClear}
+                        className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center justify-center w-5 h-5 bg-system-label-tertiary rounded-full text-system-background active:scale-90 transition-transform"
+                        aria-label="Clear input"
+                    >
+                        <X size={14} />
+                    </button>
+                )}
+            </div>
+        </div>
+    );
+  };
 
   return (
     <div className="p-4 space-y-6">
@@ -170,10 +221,12 @@ const Profile: React.FC<ProfileProps> = ({ session, onLogout }) => {
                 <h2 className="text-xl font-bold text-system-label">Bilgilerim</h2>
                 <button onClick={editMode ? handleUpdateProfile : () => setEditMode(true)} className="text-system-blue text-lg"> {loading && editMode ? 'Kaydediliyor...' : editMode ? 'Kaydet' : 'Düzenle'} </button>
             </div>
-            <div className="p-4 space-y-4"> {editMode ? renderEditRow('Ad Soyad', fullName || '', setFullName, 'text', 'Ad Soyad') : renderInfoRow('Ad Soyad', fullName)} </div>
-             <div className="p-4 space-y-4"> {editMode ? renderEditRow('Yaş', age, setAge, 'number', 'Yaş') : renderInfoRow('Yaş', age)} </div>
-             <div className="p-4 space-y-4"> {renderInfoRow('Boy', height, 'cm')} </div>
-             <div className="p-4 space-y-4"> {renderInfoRow('Kilo', weight, 'kg')} </div>
+            <div className="p-4"> 
+              {editMode ? renderEditRow('Ad Soyad', fullName || '', setFullName, 'text', 'Ad Soyad') : renderInfoRow('Ad Soyad', fullName)} 
+            </div>
+            <div className="p-4"> 
+              {editMode ? renderEditRow('Yaş', age, setAge, 'number', 'Yaş') : renderInfoRow('Yaş', age)} 
+            </div>
         </div>
         <div className="bg-system-background-secondary rounded-xl">
             <div className="p-4 flex justify-between items-center">
@@ -182,7 +235,17 @@ const Profile: React.FC<ProfileProps> = ({ session, onLogout }) => {
             </div>
             {height && weight ? (
             <div className='p-4 space-y-4'>
-                <div className="text-center">
+                <div className="grid grid-cols-2 gap-4 text-center">
+                    <div>
+                        <p className="text-4xl font-bold text-system-label">{weight || '-'}</p>
+                        <p className="text-system-label-secondary text-sm">Kilo (kg)</p>
+                    </div>
+                    <div>
+                        <p className="text-4xl font-bold text-system-label">{height || '-'}</p>
+                        <p className="text-system-label-secondary text-sm">Boy (cm)</p>
+                    </div>
+                </div>
+                <div className="text-center pt-4">
                     <span className={`px-3 py-1 text-sm font-bold rounded-full ${bmiInfo.color} ${bmiInfo.textColor}`}>{bmiInfo.category}</span>
                     <p className="text-6xl font-bold text-system-label mt-2">{bmi ? bmi.toFixed(1) : '-'}</p>
                     <p className="text-system-label-secondary text-sm">Vücut Kitle Endeksi</p>
@@ -192,7 +255,11 @@ const Profile: React.FC<ProfileProps> = ({ session, onLogout }) => {
                     <div className="w-1/4 bg-system-green"></div>
                     <div className="w-1/4 bg-system-yellow"></div>
                     <div className="w-1/4 bg-system-red"></div>
-                    {bmi && ( <div className="absolute h-full flex items-center" style={{ left: `calc(${Math.min(100, (bmi/40)*100)}% - 2px)` }}> <div className="w-2 h-4 bg-white rounded-full shadow-lg border-2 border-system-background-secondary"></div> </div> )}
+                    {bmi && ( 
+                        <div className="absolute h-full flex items-center" style={{ left: `calc(${bmiPercent}% - 4px)` }}> 
+                            <div className="w-2 h-4 bg-white rounded-full shadow-lg border-2 border-system-background-secondary"></div> 
+                        </div> 
+                    )}
                 </div>
                 {chartData.length > 0 && (
                     <div className="h-64 w-full pt-4 pb-4">
@@ -209,7 +276,7 @@ const Profile: React.FC<ProfileProps> = ({ session, onLogout }) => {
                     </div>
                 )}
             </div>
-             ) : ( <p className="text-center text-system-label-secondary py-8 px-4">VKİ ve grafik için lütfen ilk ölçümünüzü ekleyin.</p> )}
+             ) : ( <p className="text-center text-system-label-secondary py-8 px-4">Başlamak için ilk ölçümünüzü ekleyin.</p> )}
         </div>
         <div className="bg-system-background-secondary rounded-xl">
             <button onClick={onLogout} className="w-full p-4 text-system-red text-center text-lg flex items-center justify-center gap-2"> <LogOut size={20} /> <span>Çıkış Yap</span> </button>
