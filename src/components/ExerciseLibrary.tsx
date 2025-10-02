@@ -1,5 +1,5 @@
 // src/components/ExerciseLibrary.tsx
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Search, Star, X, Filter } from 'lucide-react';
 import { Exercise, getBodyParts } from '../services/exerciseApi';
 import ExerciseDetailsModal from './ExerciseDetailsModal';
@@ -30,6 +30,7 @@ const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({ onExerciseSelect, all
   const [bodyParts, setBodyParts] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedBodyPart, setSelectedBodyPart] = useState('all');
+  const topRef = useRef<HTMLDivElement>(null); // Sayfanın başına referans oluşturuldu
 
   useEffect(() => {
     const fetchBodyPartsData = async () => {
@@ -74,21 +75,45 @@ const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({ onExerciseSelect, all
       setShowFilters(false);
   }
 
-  return (
-    <>
-      <div className="p-4 space-y-6">
-          <h1 className="text-3xl font-bold text-system-label pt-4">Kütüphane</h1>
+  const handleFilterToggle = () => {
+    // Eğer filtreler kapalıysa ve açılacaksa, sayfanın en üstündeki referansa git.
+    if (!showFilters) {
+        topRef.current?.scrollIntoView({ behavior: 'auto' });
+    }
+    setShowFilters(prev => !prev);
+  };
 
-          <div className="flex gap-2 items-center">
+  return (
+    <div ref={topRef}>
+      {/* Sticky Header */}
+      <div className="sticky top-[env(safe-area-inset-top)] z-10 bg-system-background/95 pt-4 pb-4 px-4">
+        <h1 className="text-3xl font-bold text-system-label">Kütüphane</h1>
+        <div className="flex gap-2 items-center mt-4">
             <div className="relative flex-grow">
                 <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-system-label-tertiary" />
-                <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Hareket adı ara..." className="w-full pl-10 pr-4 py-2 bg-system-background-tertiary text-system-label rounded-lg focus:outline-none focus:ring-2 focus:ring-system-blue" />
+                <input 
+                    type="text" 
+                    value={searchQuery} 
+                    onChange={(e) => setSearchQuery(e.target.value)} 
+                    placeholder="Hareket adı ara..." 
+                    className="w-full pl-10 pr-10 py-2 bg-system-background-secondary text-system-label rounded-lg focus:outline-none focus:ring-2 focus:ring-system-blue" 
+                />
+                {searchQuery && (
+                    <button
+                        onClick={() => setSearchQuery('')}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center justify-center w-5 h-5 bg-system-label-tertiary rounded-full text-system-background active:scale-90 transition-transform"
+                    >
+                        <X size={14} />
+                    </button>
+                )}
             </div>
-            <button onClick={() => setShowFilters(prev => !prev)} className="p-2 bg-system-fill rounded-lg text-system-label">
+            <button onClick={handleFilterToggle} className="p-2 bg-system-fill rounded-lg text-system-label">
                 <Filter size={20} />
             </button>
-          </div>
-
+        </div>
+      </div>
+      {/* Scrollable Content */}
+      <div className="p-4 space-y-4">
         {showFilters && (
             <div className="bg-system-background-secondary rounded-xl p-4">
                 <h2 className="font-semibold text-system-label mb-3">Vücut Bölgesi</h2>
@@ -136,7 +161,7 @@ const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({ onExerciseSelect, all
             getImageUrl={getImageUrl}
         />
       )}
-    </>
+    </div>
   );
 };
 

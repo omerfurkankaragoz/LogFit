@@ -1,6 +1,6 @@
 // src/components/RoutinesList.tsx
 import React, { useState } from 'react';
-import { Plus, Edit, Trash2, ChevronDown, Copy, Dumbbell } from 'lucide-react';
+import { Plus, Edit, Trash2, ChevronDown, Copy, Dumbbell, Radar } from 'lucide-react';
 import { Exercise as LibraryExercise } from '../services/exerciseApi';
 
 export interface Routine {
@@ -36,78 +36,84 @@ const RoutinesList: React.FC<RoutinesListProps> = ({ routines, onAddNewRoutine, 
   };
 
   return (
-    <div className="p-4 space-y-6">
-      <div className="flex justify-between items-center pt-4">
-        <h1 className="text-3xl font-bold text-system-label">Rutinler</h1>
-        <button
-          onClick={onAddNewRoutine}
-          className="bg-system-blue text-white p-2 rounded-full hover:opacity-90 transition-opacity active:scale-95"
-        >
-          <Plus size={22} />
-        </button>
+    <div>
+      {/* Sticky Header */}
+      <div className="sticky top-[env(safe-area-inset-top)] z-10 bg-system-background/95 pt-4 pb-4 px-4">
+        <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-bold text-system-label">Rutinler</h1>
+          <button
+            onClick={onAddNewRoutine}
+            className="bg-system-blue text-white p-2 rounded-full hover:opacity-90 transition-opacity active:scale-95"
+          >
+            <Plus size={22} />
+          </button>
+        </div>
       </div>
+      
+      {/* Scrollable Content */}
+      <div className="p-4 space-y-6">
+        {routines.length === 0 ? (
+          <div className="text-center py-16 px-4 bg-system-background-secondary rounded-xl">
+            <Radar size={40} className="mx-auto text-system-label-tertiary mb-4" />
+            <h3 className="text-lg font-semibold text-system-label mb-1">Henüz Rutin Yok</h3>
+            <p className="text-system-label-secondary text-sm">
+              Yeni bir antrenman rutini oluşturmak için sağ üstteki '+' butonuna dokunun.
+            </p>
+          </div>
+        ) : (
+          <div className="bg-system-background-secondary rounded-xl divide-y divide-system-separator">
+              {routines.map((routine) => {
+              const isExpanded = expandedRoutineId === routine.id;
+              return (
+                  <div key={routine.id}>
+                  <button
+                      onClick={() => handleCardClick(routine.id)}
+                      className="w-full text-left p-4 flex justify-between items-center hover:bg-system-fill-tertiary transition-colors"
+                  >
+                      <div className="flex-1 min-w-0 pr-4">
+                      <h3 className="font-semibold text-system-label text-lg">{routine.name}</h3>
+                      <p className="text-sm text-system-label-secondary mt-1">
+                          {routine.exercises?.length || 0} hareket
+                      </p>
+                      </div>
+                      <ChevronDown
+                      size={20}
+                      className={`text-system-label-tertiary transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}
+                      />
+                  </button>
 
-      {routines.length === 0 ? (
-        <div className="text-center py-16 px-4 bg-system-background-secondary rounded-xl">
-          <Dumbbell size={40} className="mx-auto text-system-label-tertiary mb-4" />
-          <h3 className="text-lg font-semibold text-system-label mb-1">Henüz Rutin Yok</h3>
-          <p className="text-system-label-secondary text-sm">
-            Yeni bir antrenman rutini oluşturmak için sağ üstteki '+' butonuna dokunun.
-          </p>
-        </div>
-      ) : (
-        <div className="bg-system-background-secondary rounded-xl divide-y divide-system-separator">
-            {routines.map((routine) => {
-            const isExpanded = expandedRoutineId === routine.id;
-            return (
-                <div key={routine.id}>
-                <button
-                    onClick={() => handleCardClick(routine.id)}
-                    className="w-full text-left p-4 flex justify-between items-center hover:bg-system-fill-tertiary transition-colors"
-                >
-                    <div className="flex-1 min-w-0 pr-4">
-                    <h3 className="font-semibold text-system-label text-lg">{routine.name}</h3>
-                    <p className="text-sm text-system-label-secondary mt-1">
-                        {routine.exercises?.length || 0} hareket
-                    </p>
-                    </div>
-                    <ChevronDown
-                    size={20}
-                    className={`text-system-label-tertiary transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}
-                    />
-                </button>
-
-                {isExpanded && (
-                    <div className="px-4 pb-4">
-                    <div className="border-t border-system-separator pt-3 mt-2">
-                        <div className="space-y-3">
-                        {(routine.exercises || []).map(ex => {
-                            const libEx = allLibraryExercises.find(lib => lib.id === ex.id || lib.name === ex.name);
-                            return (
-                            <div key={ex.id} className="flex items-center gap-4">
-                                <img
-                                src={getImageUrl(libEx?.gifUrl)}
-                                alt={ex.name}
-                                className="w-10 h-10 rounded-lg object-cover flex-shrink-0 bg-system-background-tertiary"
-                                />
-                                <span className="text-sm text-system-label">{ex.name}</span>
-                            </div>
-                            );
-                        })}
-                        </div>
-                        <div className="flex gap-2 mt-4 pt-4 border-t border-system-separator">
-                            <button onClick={(e) => { e.stopPropagation(); onCopyRoutine(routine); }} className="flex-1 py-2 px-3 bg-system-fill-tertiary text-system-label rounded-lg flex items-center justify-center gap-2 text-sm font-medium hover:bg-system-fill-secondary transition-colors"> <Copy size={16} /> Kopyala </button>
-                            <button onClick={(e) => { e.stopPropagation(); onEditRoutine(routine); }} className="flex-1 py-2 px-3 bg-system-fill-tertiary text-system-label rounded-lg flex items-center justify-center gap-2 text-sm font-medium hover:bg-system-fill-secondary transition-colors"> <Edit size={16} /> Düzenle </button>
-                            <button onClick={(e) => { e.stopPropagation(); onDeleteRoutine(routine.id); }} className="flex-1 py-2 px-3 bg-system-red text-white rounded-lg flex items-center justify-center gap-2 text-sm font-medium hover:opacity-90 transition-opacity"> <Trash2 size={16} /> Sil </button>
-                        </div>
-                    </div>
-                    </div>
-                )}
-                </div>
-            );
-            })}
-        </div>
-      )}
+                  {isExpanded && (
+                      <div className="px-4 pb-4">
+                      <div className="border-t border-system-separator pt-3 mt-2">
+                          <div className="space-y-3">
+                          {(routine.exercises || []).map(ex => {
+                              const libEx = allLibraryExercises.find(lib => lib.id === ex.id || lib.name === ex.name);
+                              return (
+                              <div key={ex.id} className="flex items-center gap-4">
+                                  <img
+                                  src={getImageUrl(libEx?.gifUrl)}
+                                  alt={ex.name}
+                                  className="w-10 h-10 rounded-lg object-cover flex-shrink-0 bg-system-background-tertiary"
+                                  />
+                                  <span className="text-sm text-system-label">{ex.name}</span>
+                              </div>
+                              );
+                          })}
+                          </div>
+                          <div className="flex gap-2 mt-4 pt-4 border-t border-system-separator">
+                              <button onClick={(e) => { e.stopPropagation(); onCopyRoutine(routine); }} className="flex-1 py-2 px-3 bg-system-fill-tertiary text-system-label rounded-lg flex items-center justify-center gap-2 text-sm font-medium hover:bg-system-fill-secondary transition-colors"> <Copy size={16} /> Kopyala </button>
+                              <button onClick={(e) => { e.stopPropagation(); onEditRoutine(routine); }} className="flex-1 py-2 px-3 bg-system-fill-tertiary text-system-label rounded-lg flex items-center justify-center gap-2 text-sm font-medium hover:bg-system-fill-secondary transition-colors"> <Edit size={16} /> Düzenle </button>
+                              <button onClick={(e) => { e.stopPropagation(); onDeleteRoutine(routine.id); }} className="flex-1 py-2 px-3 bg-system-red text-white rounded-lg flex items-center justify-center gap-2 text-sm font-medium hover:opacity-90 transition-opacity"> <Trash2 size={16} /> Sil </button>
+                          </div>
+                      </div>
+                      </div>
+                  )}
+                  </div>
+              );
+              })}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

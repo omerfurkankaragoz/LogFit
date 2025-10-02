@@ -58,7 +58,7 @@ const mapToMajorGroup = (bodyPart: string): string => {
 
 const ProgressCharts: React.FC<{ workouts: Workout[] }> = ({ workouts }) => {
   const [selectedExercise, setSelectedExercise] = useState<string>('');
-  const [timeRange, setTimeRange] = useState<TimeRange>('all');
+  const [timeRange, setTimeRange] = useState<TimeRange>('month'); // DEĞİŞİKLİK: Varsayılan 'month' yapıldı
 
   const chartStyles = {
     gridColor: 'rgba(84, 84, 88, 0.6)', 
@@ -171,56 +171,64 @@ const ProgressCharts: React.FC<{ workouts: Workout[] }> = ({ workouts }) => {
   }
 
   return (
-    <div className="p-4 space-y-6">
-      <h1 className="text-3xl font-bold text-system-label pt-4">İlerleme</h1>
-      <FilterButtons />
-
-      {filteredWorkouts.length === 0 ? (
-          <div className="text-center py-16 px-4 bg-system-background-secondary rounded-xl">
-              <h3 className="text-xl font-medium text-system-label-secondary mb-2">Bu Aralıkta Veri Yok</h3>
-              <p className="text-system-label-tertiary text-md">Lütfen farklı bir zaman aralığı seçin.</p>
-          </div>
-      ) : (
-        <>
-            <div className="bg-system-background-secondary rounded-2xl p-4 space-y-6">
-                <h2 className="font-bold text-xl text-system-label">Genel İlerleme</h2>
-                
-                {radarChartData.hasData && (
-                <div>
-                    <h3 className="text-md font-semibold text-system-label-secondary mb-3">Kas Grubu Dağılımı (Hacme Göre)</h3>
-                    <div className="h-80 w-full"><ResponsiveContainer>
-                        <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarChartData.data}>
-                            <PolarGrid stroke={chartStyles.gridColor} />
-                            <PolarAngleAxis dataKey="subject" tick={{ fill: chartStyles.tickColor, fontSize: 12 }} />
-                            <PolarRadiusAxis angle={30} domain={[0, 'dataMax']} tick={false} axisLine={false} />
-                            <Radar name="Hacim" dataKey="value" stroke="#0A84FF" fill="#0A84FF" fillOpacity={0.6} />
-                            <Tooltip content={<CustomTooltip />} />
-                        </RadarChart>
-                    </ResponsiveContainer></div>
-                </div>
-                )}
-                
-                <div><h3 className="text-md font-semibold text-system-label-secondary mb-3">Toplam Hacim (kg)</h3><div className="h-56"><ResponsiveContainer width="100%" height="100%"><LineChart data={generalStats}><CartesianGrid strokeDasharray="3 3" stroke={chartStyles.gridColor} /><XAxis dataKey="dateFormatted" tick={{ fontSize: 12, fill: chartStyles.tickColor }} /><YAxis tick={{ fontSize: 12, fill: chartStyles.tickColor }} /><Tooltip content={<CustomTooltip />} /><Line type="monotone" dataKey="totalVolume" name="Toplam Hacim" unit=" kg" stroke="#0A84FF" strokeWidth={2.5} dot={{ fill: '#0A84FF', r: 4 }} activeDot={{ r: 6 }} /></LineChart></ResponsiveContainer></div></div>
-                
-                <div><h3 className="text-md font-semibold text-system-label-secondary mb-3">Toplam Set Sayısı</h3><div className="h-56"><ResponsiveContainer width="100%" height="100%"><BarChart data={generalStats}><CartesianGrid strokeDasharray="3 3" stroke={chartStyles.gridColor} /><XAxis dataKey="dateFormatted" tick={{ fontSize: 12, fill: chartStyles.tickColor }} /><YAxis tick={{ fontSize: 12, fill: chartStyles.tickColor }} allowDecimals={false} /><Tooltip content={<CustomTooltip />} cursor={{fill: 'rgba(255, 159, 10, 0.1)'}}/><Bar dataKey="totalSets" name="Toplam Set" unit=" set" radius={[8, 8, 0, 0]} barSize={20} fill="#FF9F0A" /></BarChart></ResponsiveContainer></div></div>
+    <div>
+        {/* Sticky Header */}
+        <div className="sticky top-[env(safe-area-inset-top)] z-10 bg-system-background/95 backdrop-blur-md pt-4 pb-4 px-4">
+            <h1 className="text-3xl font-bold text-system-label">İlerleme</h1>
+            <div className="mt-4">
+                <FilterButtons />
             </div>
-
-            <div className="bg-system-background-secondary rounded-2xl p-4 space-y-4">
-                <h2 className="font-bold text-xl text-system-label">Hareket Bazlı İlerleme</h2>
-                <select value={selectedExercise} onChange={(e) => setSelectedExercise(e.target.value)} className="w-full p-3 border-none bg-system-background-tertiary text-system-label rounded-lg focus:outline-none focus:ring-2 focus:ring-system-blue text-base">
-                    <option value="">Hareket seçin</option>
-                    {allExercises.map(exercise => (<option key={exercise} value={exercise}>{exercise}</option>))}
-                </select>
-                
-                {selectedExercise && exerciseData.length > 0 ? (
-                <div className="space-y-6">
-                    <div><h3 className="text-md font-semibold text-system-label-secondary mb-3">Maksimum Ağırlık - {selectedExercise}</h3><div className="h-56"><ResponsiveContainer width="100%" height="100%"><LineChart data={exerciseData}><CartesianGrid strokeDasharray="3 3" stroke={chartStyles.gridColor} /><XAxis dataKey="dateFormatted" tick={{ fontSize: 12, fill: chartStyles.tickColor }} /><YAxis type="number" domain={['dataMin - 5', 'dataMax + 5']} tick={{ fontSize: 12, fill: chartStyles.tickColor }} /><Tooltip content={<CustomTooltip />} /><Line type="monotone" dataKey="maxWeight" name="Maks Ağırlık" unit=" kg" stroke="#30D158" strokeWidth={2.5} dot={{ fill: '#30D158', r: 4 }} activeDot={{ r: 6 }} /></LineChart></ResponsiveContainer></div></div>
-                    <div><h3 className="text-md font-semibold text-system-label-secondary mb-3">Toplam Hacim - {selectedExercise}</h3><div className="h-56"><ResponsiveContainer width="100%" height="100%"><BarChart data={exerciseData}><CartesianGrid strokeDasharray="3 3" stroke={chartStyles.gridColor} /><XAxis dataKey="dateFormatted" tick={{ fontSize: 12, fill: chartStyles.tickColor }} /><YAxis tick={{ fontSize: 12, fill: chartStyles.tickColor }} /><Tooltip content={<CustomTooltip />} cursor={{fill: 'rgba(175, 82, 222, 0.1)'}}/><Bar dataKey="totalVolume" name="Toplam Hacim" unit=" kg" radius={[8, 8, 0, 0]} barSize={20} fill="#AF52DE"/></BarChart></ResponsiveContainer></div></div>
+        </div>
+        
+        {/* Scrollable Content */}
+        <div className="p-4 space-y-6">
+            {filteredWorkouts.length === 0 ? (
+                <div className="text-center py-16 px-4 bg-system-background-secondary rounded-xl">
+                    <h3 className="text-xl font-medium text-system-label-secondary mb-2">Bu Aralıkta Veri Yok</h3>
+                    <p className="text-system-label-tertiary text-md">Lütfen farklı bir zaman aralığı seçin.</p>
                 </div>
-                ) : selectedExercise && exerciseData.length === 0 ? (<div className="text-center py-8 text-system-label-secondary text-md">Bu hareket için seçili aralıkta veri bulunmuyor.</div>) : (<div className="text-center py-8 text-system-label-secondary text-md">İlerlemenizi görmek için bir hareket seçin.</div>)}
-            </div>
-        </>
-      )}
+            ) : (
+                <>
+                    <div className="bg-system-background-secondary rounded-2xl p-4 space-y-6">
+                        <h2 className="font-bold text-xl text-system-label">Genel İlerleme</h2>
+                        
+                        {radarChartData.hasData && (
+                        <div>
+                            <h3 className="text-md font-semibold text-system-label-secondary mb-3">Kas Grubu Dağılımı (Hacme Göre)</h3>
+                            <div className="h-80 w-full"><ResponsiveContainer>
+                                <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarChartData.data}>
+                                    <PolarGrid stroke={chartStyles.gridColor} />
+                                    <PolarAngleAxis dataKey="subject" tick={{ fill: chartStyles.tickColor, fontSize: 12 }} />
+                                    <PolarRadiusAxis angle={30} domain={[0, 'dataMax']} tick={false} axisLine={false} />
+                                    <Radar name="Hacim" dataKey="value" stroke="#0A84FF" fill="#0A84FF" fillOpacity={0.6} />
+                                    <Tooltip content={<CustomTooltip />} />
+                                </RadarChart>
+                            </ResponsiveContainer></div>
+                        </div>
+                        )}
+                        
+                        <div><h3 className="text-md font-semibold text-system-label-secondary mb-3">Toplam Hacim (kg)</h3><div className="h-56"><ResponsiveContainer width="100%" height="100%"><LineChart data={generalStats}><CartesianGrid strokeDasharray="3 3" stroke={chartStyles.gridColor} /><XAxis dataKey="dateFormatted" tick={{ fontSize: 12, fill: chartStyles.tickColor }} /><YAxis tick={{ fontSize: 12, fill: chartStyles.tickColor }} /><Tooltip content={<CustomTooltip />} /><Line type="monotone" dataKey="totalVolume" name="Toplam Hacim" unit=" kg" stroke="#0A84FF" strokeWidth={2.5} dot={{ fill: '#0A84FF', r: 4 }} activeDot={{ r: 6 }} /></LineChart></ResponsiveContainer></div></div>
+                        
+                        <div><h3 className="text-md font-semibold text-system-label-secondary mb-3">Toplam Set Sayısı</h3><div className="h-56"><ResponsiveContainer width="100%" height="100%"><BarChart data={generalStats}><CartesianGrid strokeDasharray="3 3" stroke={chartStyles.gridColor} /><XAxis dataKey="dateFormatted" tick={{ fontSize: 12, fill: chartStyles.tickColor }} /><YAxis tick={{ fontSize: 12, fill: chartStyles.tickColor }} allowDecimals={false} /><Tooltip content={<CustomTooltip />} cursor={{fill: 'rgba(255, 159, 10, 0.1)'}}/><Bar dataKey="totalSets" name="Toplam Set" unit=" set" radius={[8, 8, 0, 0]} barSize={20} fill="#FF9F0A" /></BarChart></ResponsiveContainer></div></div>
+                    </div>
+
+                    <div className="bg-system-background-secondary rounded-2xl p-4 space-y-4">
+                        <h2 className="font-bold text-xl text-system-label">Hareket Bazlı İlerleme</h2>
+                        <select value={selectedExercise} onChange={(e) => setSelectedExercise(e.target.value)} className="w-full p-3 border-none bg-system-background-tertiary text-system-label rounded-lg focus:outline-none focus:ring-2 focus:ring-system-blue text-base">
+                            <option value="">Hareket seçin</option>
+                            {allExercises.map(exercise => (<option key={exercise} value={exercise}>{exercise}</option>))}
+                        </select>
+                        
+                        {selectedExercise && exerciseData.length > 0 ? (
+                        <div className="space-y-6">
+                            <div><h3 className="text-md font-semibold text-system-label-secondary mb-3">Maksimum Ağırlık - {selectedExercise}</h3><div className="h-56"><ResponsiveContainer width="100%" height="100%"><LineChart data={exerciseData}><CartesianGrid strokeDasharray="3 3" stroke={chartStyles.gridColor} /><XAxis dataKey="dateFormatted" tick={{ fontSize: 12, fill: chartStyles.tickColor }} /><YAxis type="number" domain={['dataMin - 5', 'dataMax + 5']} tick={{ fontSize: 12, fill: chartStyles.tickColor }} /><Tooltip content={<CustomTooltip />} /><Line type="monotone" dataKey="maxWeight" name="Maks Ağırlık" unit=" kg" stroke="#30D158" strokeWidth={2.5} dot={{ fill: '#30D158', r: 4 }} activeDot={{ r: 6 }} /></LineChart></ResponsiveContainer></div></div>
+                            <div><h3 className="text-md font-semibold text-system-label-secondary mb-3">Toplam Hacim - {selectedExercise}</h3><div className="h-56"><ResponsiveContainer width="100%" height="100%"><BarChart data={exerciseData}><CartesianGrid strokeDasharray="3 3" stroke={chartStyles.gridColor} /><XAxis dataKey="dateFormatted" tick={{ fontSize: 12, fill: chartStyles.tickColor }} /><YAxis tick={{ fontSize: 12, fill: chartStyles.tickColor }} /><Tooltip content={<CustomTooltip />} cursor={{fill: 'rgba(175, 82, 222, 0.1)'}}/><Bar dataKey="totalVolume" name="Toplam Hacim" unit=" kg" radius={[8, 8, 0, 0]} barSize={20} fill="#AF52DE"/></BarChart></ResponsiveContainer></div></div>
+                        </div>
+                        ) : selectedExercise && exerciseData.length === 0 ? (<div className="text-center py-8 text-system-label-secondary text-md">Bu hareket için seçili aralıkta veri bulunmuyor.</div>) : (<div className="text-center py-8 text-system-label-secondary text-md">İlerlemenizi görmek için bir hareket seçin.</div>)}
+                    </div>
+                </>
+            )}
+        </div>
     </div>
   );
 };

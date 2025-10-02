@@ -189,7 +189,21 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
                 </div>
                 <div className="relative">
                     <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-system-label-tertiary" />
-                    <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Kütüphaneden Ara" className="w-full pl-10 pr-4 py-3 bg-system-background-tertiary text-system-label rounded-lg focus:outline-none focus:ring-2 focus:ring-system-blue" />
+                    <input 
+                        type="text" 
+                        value={searchQuery} 
+                        onChange={(e) => setSearchQuery(e.target.value)} 
+                        placeholder="Kütüphaneden Ara" 
+                        className="w-full pl-10 pr-10 py-3 bg-system-background-tertiary text-system-label rounded-lg focus:outline-none focus:ring-2 focus:ring-system-blue" 
+                    />
+                    {searchQuery && (
+                        <button
+                            onClick={() => setSearchQuery('')}
+                            className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center justify-center w-5 h-5 bg-system-label-tertiary rounded-full text-system-background active:scale-90 transition-transform"
+                        >
+                            <X size={14} />
+                        </button>
+                    )}
                 </div>
             </div>
         </div>
@@ -290,7 +304,7 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
   return (
     <div>
       {/* BAŞLIK BÖLÜMÜ - EKRANIN ÜSTÜNE SABİTLENDİ */}
-      <div className="sticky top-[env(safe-area-inset-top)] z-10 bg-system-background/100 backdrop-blur-md border-b border-system-separator">
+      <div className="sticky top-[env(safe-area-inset-top)] z-10 bg-system-background/95 backdrop-blur-md">
         <div className="flex justify-between items-center p-4">
           <button onClick={onCancel} className="text-system-blue text-lg">İptal</button>
           <button onClick={handleSave} className="text-system-blue text-lg font-bold">Kaydet</button>

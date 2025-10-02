@@ -192,7 +192,7 @@ const CreateRoutine: React.FC<CreateRoutineProps> = ({ existingRoutine, onSaveRo
   return (
     <div>
       {/* BAŞLIK BÖLÜMÜ - SABİT */}
-      <div className="sticky top-[env(safe-area-inset-top)] z-10 bg-system-background/100 backdrop-blur-md border-b border-system-separator">
+      <div className="sticky top-[env(safe-area-inset-top)] z-10 bg-system-background/95 backdrop-blur-md  border-system-separator">
         <div className="flex justify-between items-center p-4">
             <button onClick={onCancel} className="text-system-blue text-lg">İptal</button>
             <h1 className="text-xl font-bold text-system-label">{existingRoutine?.id ? 'Rutini Düzenle' : 'Yeni Rutin'}</h1>
