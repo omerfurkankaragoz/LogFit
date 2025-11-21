@@ -1,5 +1,7 @@
+// src/App.tsx
 import React, { useState, useEffect } from 'react';
-import { CalendarRange, Radar, LibraryBig, LineChart, UserCog } from 'lucide-react';
+import { CalendarRange, Radar, LibraryBig, LineChart } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import WorkoutCalendar from './components/WorkoutCalendar';
 import AddWorkout from './components/AddWorkout';
 import WorkoutDetails from './components/WorkoutDetails';
@@ -12,6 +14,7 @@ import Profile from './components/Profile';
 import { supabase } from './services/supabaseClient';
 import { Session } from '@supabase/supabase-js';
 import { getAllExercises, Exercise as LibraryExercise } from './services/exerciseApi';
+import { CalendarSkeleton, BottomNavSkeleton } from './components/Skeletons';
 
 export interface Exercise {
   id: string;
@@ -40,13 +43,19 @@ function App() {
   const [allLibraryExercises, setAllLibraryExercises] = useState<LibraryExercise[]>([]);
   const [favoriteExercises, setFavoriteExercises] = useState<string[]>([]);
 
+  // Yeni: Kullanıcı profil bilgileri için state
+  const [userProfile, setUserProfile] = useState<{ fullName: string | null, avatarUrl: string | null }>({ fullName: null, avatarUrl: null });
+
   useEffect(() => {
     setLoading(true);
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      setLoading(false);
+      if (!session) setLoading(false);
     });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setSession(session));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (!session) setLoading(false);
+    });
     return () => subscription.unsubscribe();
   }, []);
 
@@ -58,19 +67,30 @@ function App() {
     if (!session) return;
     setLoading(true);
     try {
+      // Profil verisi sorgusuna full_name ve avatar_url eklendi
       const [workoutsRes, routinesRes, exercisesRes, profileRes] = await Promise.all([
         supabase.from('workouts').select('*').eq('user_id', session.user.id).order('date', { ascending: false }),
         supabase.from('routines').select('*').eq('user_id', session.user.id).order('name'),
         getAllExercises(),
-        supabase.from('profiles').select('favorite_exercises').eq('id', session.user.id).single(),
+        supabase.from('profiles').select('favorite_exercises, full_name, avatar_url').eq('id', session.user.id).single(),
       ]);
+
       if (workoutsRes.error) throw workoutsRes.error;
       if (routinesRes.error) throw routinesRes.error;
       if (profileRes.error && profileRes.status !== 406) throw profileRes.error;
+
       setWorkouts(workoutsRes.data as Workout[] || []);
       setRoutines(routinesRes.data as Routine[] || []);
       setAllLibraryExercises(exercisesRes || []);
-      setFavoriteExercises(profileRes.data?.favorite_exercises || []);
+
+      if (profileRes.data) {
+        setFavoriteExercises(profileRes.data.favorite_exercises || []);
+        setUserProfile({
+          fullName: profileRes.data.full_name,
+          avatarUrl: profileRes.data.avatar_url
+        });
+      }
+
     } catch (error) { console.error("Veri çekme hatası:", error); }
     finally { setLoading(false); }
   };
@@ -167,7 +187,7 @@ function App() {
         const updatedExercises = [...workoutForToday.exercises, ...newExercisesFromRoutine];
         setEditingWorkout({ ...workoutForToday, exercises: updatedExercises });
       } else {
-        return; // User cancelled merging
+        return;
       }
     } else {
       setEditingWorkout({
@@ -211,16 +231,37 @@ function App() {
   };
 
   if (loading) {
-    return <div className="min-h-screen bg-system-background flex justify-center items-center"><div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-system-blue"></div></div>;
+    return (
+      <div className="min-h-screen bg-system-background flex flex-col max-w-md mx-auto font-sans antialiased">
+        <header className="sticky top-0 z-20 bg-system-background/80 backdrop-blur-md w-full border-b border-transparent">
+          <div className="h-[env(safe-area-inset-top)]"></div>
+        </header>
+        <main className="flex-1 pb-28 px-4 pt-4">
+          <CalendarSkeleton />
+        </main>
+        <BottomNavSkeleton />
+      </div>
+    );
   }
+
   if (!session) return <Auth />;
 
   const renderContent = () => {
     switch (currentView) {
-      case 'profile': return <Profile session={session} onLogout={handleLogout} />;
-      case 'routines': return <RoutinesList routines={routines} onAddNewRoutine={() => { setEditingRoutine(null); setCurrentView('create_routine'); }} onEditRoutine={handleEditRoutine} onDeleteRoutine={handleDeleteRoutine} onCopyRoutine={handleCopyRoutine} allLibraryExercises={allLibraryExercises} onStartWorkout={handleStartWorkoutFromRoutine} />;
+      case 'profile': return <Profile session={session} onLogout={handleLogout} onBack={() => setCurrentView('calendar')} />;
+      case 'routines': return <RoutinesList routines={routines} onAddNewRoutine={() => { setEditingRoutine(null); setCurrentView('create_routine'); }} onEditRoutine={handleEditRoutine} onDeleteRoutine={handleDeleteRoutine} onCopyRoutine={handleCopyRoutine} allLibraryExercises={allLibraryExercises} onStartWorkout={handleStartWorkoutFromRoutine} onBack={() => setCurrentView('calendar')} />;
       case 'create_routine': return <CreateRoutine existingRoutine={editingRoutine} onSaveRoutine={handleSaveRoutine} onCancel={() => { setEditingRoutine(null); setCurrentView('routines'); }} allLibraryExercises={allLibraryExercises} favoriteExercises={favoriteExercises} />;
-      case 'calendar': return <WorkoutCalendar workouts={workouts} routines={routines} onDateSelect={(date) => { setSelectedDate(date); const workoutForDate = workouts.find(w => w.date === date); if (workoutForDate) { setEditingWorkout(workoutForDate); setCurrentView('details'); } else { setEditingWorkout(null); setCurrentView('add'); } }} onStartWorkout={handleStartOrContinueWorkout} onStartRoutine={handleStartWorkoutFromRoutine} />;
+      case 'calendar': return (
+        <WorkoutCalendar
+          workouts={workouts}
+          routines={routines}
+          onDateSelect={(date) => { setSelectedDate(date); const workoutForDate = workouts.find(w => w.date === date); if (workoutForDate) { setEditingWorkout(workoutForDate); setCurrentView('details'); } else { setEditingWorkout(null); setCurrentView('add'); } }}
+          onStartWorkout={handleStartOrContinueWorkout}
+          onStartRoutine={handleStartWorkoutFromRoutine}
+          userProfile={userProfile} // Profil bilgisi aktarılıyor
+          onProfileClick={() => setCurrentView('profile')} // Profil sayfasına geçiş
+        />
+      );
       case 'add': return <AddWorkout date={selectedDate} existingWorkout={editingWorkout} routines={routines} workouts={workouts} onSave={handleSaveWorkout} onCancel={() => { setEditingWorkout(null); setCurrentView('calendar'); }} allLibraryExercises={allLibraryExercises} favoriteExercises={favoriteExercises} />;
       case 'details':
         const selectedWorkout = workouts.find(w => w.date === selectedDate);
@@ -238,13 +279,14 @@ function App() {
     }
   };
 
+  // GÜNCELLEME: Profil ikonu kaldırıldı
   const renderBottomNav = () => {
     const navItems = [
       { view: 'calendar', icon: CalendarRange, label: 'Takvim' },
       { view: 'routines', icon: Radar, label: 'Rutinler' },
       { view: 'library', icon: LibraryBig, label: 'Kütüphane' },
       { view: 'progress', icon: LineChart, label: 'İlerleme' },
-      { view: 'profile', icon: UserCog, label: 'Profil' },
+      // Profil buraya eklenmedi
     ];
     return (
       <nav className="fixed bottom-0 left-0 right-0 bg-system-background-secondary/90 backdrop-blur-xl border-t border-system-separator z-50">
@@ -267,7 +309,18 @@ function App() {
       </header>
 
       <main className="flex-1 pb-28">
-        {renderContent()}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentView}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+            className="w-full"
+          >
+            {renderContent()}
+          </motion.div>
+        </AnimatePresence>
       </main>
 
       {renderBottomNav()}

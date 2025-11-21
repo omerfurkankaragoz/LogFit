@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Plus, Edit, Trash2, ChevronDown, Copy, Radar, Play, ArrowLeft } from 'lucide-react';
 import { Exercise as LibraryExercise } from '../services/exerciseApi';
-import { Routine } from '../types'; // Import Routine from types
+import { Routine } from '../types';
 
 interface RoutinesListProps {
   routines: Routine[];
@@ -34,13 +34,10 @@ const RoutinesList: React.FC<RoutinesListProps> = ({ routines, onAddNewRoutine, 
 
   return (
     <div>
-      {/* Sticky Header */}
-      <div className="sticky top-[env(safe-area-inset-top)] z-10 bg-system-background/95 backdrop-blur-md pt-4 pb-4 px-4 border-b border-system-separator/20">
+      {/* Sticky Header - GÜNCELLENDİ: bg-system-background/80 ve backdrop-blur-md */}
+      <div className="sticky top-[env(safe-area-inset-top)] z-10 bg-system-background/80 backdrop-blur-md pt-4 pb-4 px-4 border-b border-system-separator/20 transition-colors duration-200">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <button onClick={onBack} className="p-1 -ml-2 text-system-blue hover:opacity-80 transition-opacity">
-              <ArrowLeft size={24} />
-            </button>
             <h1 className="text-3xl font-bold text-system-label">Rutinler</h1>
           </div>
           <button

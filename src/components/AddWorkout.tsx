@@ -351,8 +351,8 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
 
   return (
     <div className="bg-system-background min-h-full relative">
-      {/* Header */}
-      <div className="sticky top-[env(safe-area-inset-top)] z-10 bg-system-background/95 backdrop-blur-md border-b border-system-separator/20">
+      {/* Header - GÜNCELLENDİ: bg-system-background/80 ve backdrop-blur-md */}
+      <div className="sticky top-[env(safe-area-inset-top)] z-10 bg-system-background/80 backdrop-blur-md border-b border-system-separator/20 transition-colors duration-200">
         <div className="flex justify-between items-center p-4">
           <button onClick={onCancel} className="text-system-blue text-lg font-medium hover:opacity-80 transition-opacity px-2 -ml-2">İptal</button>
           <div className="flex items-center gap-2">
