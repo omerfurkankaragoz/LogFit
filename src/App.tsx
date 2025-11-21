@@ -1,7 +1,5 @@
-// src/App.tsx
-
 import React, { useState, useEffect } from 'react';
-import { Calendar, Radar, LibraryBig, LineChart, User, UserCog, CalendarRange } from 'lucide-react'; 
+import { CalendarRange, Radar, LibraryBig, LineChart, UserCog } from 'lucide-react';
 import WorkoutCalendar from './components/WorkoutCalendar';
 import AddWorkout from './components/AddWorkout';
 import WorkoutDetails from './components/WorkoutDetails';
@@ -19,7 +17,7 @@ export interface Exercise {
   id: string;
   name: string;
   bodyPart?: string;
-  sets: { reps: number; weight: number }[];
+  sets: { reps: number; weight: number; completed?: boolean }[];
 }
 export interface Workout {
   id: string;
@@ -73,7 +71,7 @@ function App() {
       setRoutines(routinesRes.data as Routine[] || []);
       setAllLibraryExercises(exercisesRes || []);
       setFavoriteExercises(profileRes.data?.favorite_exercises || []);
-    } catch (error) { console.error("Veri çekme hatası:", error); } 
+    } catch (error) { console.error("Veri çekme hatası:", error); }
     finally { setLoading(false); }
   };
 
@@ -99,17 +97,17 @@ function App() {
   };
 
   const handleSaveWorkout = async (workoutData: Omit<Workout, 'id' | 'user_id' | 'created_at'>) => {
-      if (!session) return;
-      const workoutToUpdate = editingWorkout;
-      const workoutPayload = { ...workoutData, user_id: session.user.id };
-      if (workoutToUpdate && workoutToUpdate.id !== 'new') {
-          await supabase.from('workouts').update({ exercises: workoutPayload.exercises, date: workoutPayload.date }).eq('id', workoutToUpdate.id);
-      } else {
-          await supabase.from('workouts').insert([workoutPayload]);
-      }
-      setEditingWorkout(null);
-      await fetchAllData();
-      setCurrentView('calendar');
+    if (!session) return;
+    const workoutToUpdate = editingWorkout;
+    const workoutPayload = { ...workoutData, user_id: session.user.id };
+    if (workoutToUpdate && workoutToUpdate.id !== 'new') {
+      await supabase.from('workouts').update({ exercises: workoutPayload.exercises, date: workoutPayload.date }).eq('id', workoutToUpdate.id);
+    } else {
+      await supabase.from('workouts').insert([workoutPayload]);
+    }
+    setEditingWorkout(null);
+    await fetchAllData();
+    setCurrentView('calendar');
   };
 
   const handleSaveRoutine = async (id: string | null, name: string, exercises: { id: string; name: string }[]) => {
@@ -137,7 +135,7 @@ function App() {
       await fetchAllData();
     }
   };
-  
+
   const handleEditRoutine = (routine: Routine) => {
     setCurrentView('create_routine');
     setEditingRoutine(routine);
@@ -149,24 +147,56 @@ function App() {
     setEditingRoutine(copiedRoutine);
     setCurrentView('create_routine');
   };
-  
+
+  const handleStartWorkoutFromRoutine = (routine: Routine) => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const workoutForToday = workouts.find(w => w.date === todayStr);
+
+    const newExercisesFromRoutine = routine.exercises.map((routineExercise, index) => {
+      const libraryMatch = allLibraryExercises.find(libEx => libEx.name.toLowerCase() === routineExercise.name.toLowerCase());
+      return {
+        id: `routine-${routineExercise.id}-${Date.now() + index}`,
+        name: routineExercise.name,
+        bodyPart: routineExercise.bodyPart || libraryMatch?.bodyPart,
+        sets: [{ reps: 0, weight: 0, completed: false }]
+      };
+    });
+
+    if (workoutForToday) {
+      if (confirm('Bugün için zaten bir antrenman kaydı var. Bu rutindeki hareketleri mevcut antrenmana eklemek ister misiniz?')) {
+        const updatedExercises = [...workoutForToday.exercises, ...newExercisesFromRoutine];
+        setEditingWorkout({ ...workoutForToday, exercises: updatedExercises });
+      } else {
+        return; // User cancelled merging
+      }
+    } else {
+      setEditingWorkout({
+        id: 'new',
+        user_id: session?.user.id || '',
+        date: todayStr,
+        exercises: newExercisesFromRoutine
+      });
+    }
+    setSelectedDate(todayStr);
+    setCurrentView('add');
+  };
+
   const handleAddExerciseFromLibrary = (exerciseToAdd: LibraryExercise) => {
     const todayStr = new Date().toISOString().split('T')[0];
     const workoutForToday = workouts.find(w => w.date === todayStr);
     const workoutToEdit = editingWorkout && editingWorkout.date === todayStr ? editingWorkout : workoutForToday;
     const newExercise: Exercise = {
-        id: `${exerciseToAdd.id}-${Date.now()}`,
-        name: exerciseToAdd.name, bodyPart: exerciseToAdd.bodyPart, sets: [{ reps: 0, weight: 0 }]
+      id: `${exerciseToAdd.id}-${Date.now()}`,
+      name: exerciseToAdd.name, bodyPart: exerciseToAdd.bodyPart, sets: [{ reps: 0, weight: 0, completed: false }]
     };
     if (workoutToEdit) {
-        if (workoutToEdit.exercises.some(ex => ex.name.toLowerCase() === newExercise.name.toLowerCase())) {
-             alert(`"${newExercise.name}" zaten bugünkü antrenmanınızda mevcut.`);
-             return;
-        } else {
-            setEditingWorkout({ ...workoutToEdit, exercises: [newExercise, ...workoutToEdit.exercises] });
-        }
+      if (workoutToEdit.exercises.some(ex => ex.name.toLowerCase() === newExercise.name.toLowerCase())) {
+        alert(`"${newExercise.name}" zaten bugünkü antrenmanınızda mevcut.`);
+      } else {
+        setEditingWorkout({ ...workoutToEdit, exercises: [newExercise, ...workoutToEdit.exercises] });
+      }
     } else {
-        setEditingWorkout({ id: 'new', user_id: session?.user.id || '', date: todayStr, exercises: [newExercise] });
+      setEditingWorkout({ id: 'new', user_id: session?.user.id || '', date: todayStr, exercises: [newExercise] });
     }
     setSelectedDate(todayStr);
     setCurrentView('add');
@@ -176,7 +206,7 @@ function App() {
     const todayStr = new Date().toISOString().split('T')[0];
     const workoutForToday = workouts.find(w => w.date === todayStr);
     setSelectedDate(todayStr);
-    setEditingWorkout(workoutForToday || null); 
+    setEditingWorkout(workoutForToday || null);
     setCurrentView('add');
   };
 
@@ -188,19 +218,19 @@ function App() {
   const renderContent = () => {
     switch (currentView) {
       case 'profile': return <Profile session={session} onLogout={handleLogout} />;
-      case 'routines': return <RoutinesList routines={routines} onAddNewRoutine={() => { setEditingRoutine(null); setCurrentView('create_routine'); }} onEditRoutine={handleEditRoutine} onDeleteRoutine={handleDeleteRoutine} onCopyRoutine={handleCopyRoutine} allLibraryExercises={allLibraryExercises} />;
+      case 'routines': return <RoutinesList routines={routines} onAddNewRoutine={() => { setEditingRoutine(null); setCurrentView('create_routine'); }} onEditRoutine={handleEditRoutine} onDeleteRoutine={handleDeleteRoutine} onCopyRoutine={handleCopyRoutine} allLibraryExercises={allLibraryExercises} onStartWorkout={handleStartWorkoutFromRoutine} />;
       case 'create_routine': return <CreateRoutine existingRoutine={editingRoutine} onSaveRoutine={handleSaveRoutine} onCancel={() => { setEditingRoutine(null); setCurrentView('routines'); }} allLibraryExercises={allLibraryExercises} favoriteExercises={favoriteExercises} />;
-      case 'calendar': return <WorkoutCalendar workouts={workouts} onDateSelect={(date) => { setSelectedDate(date); const workoutForDate = workouts.find(w => w.date === date); if (workoutForDate) { setEditingWorkout(workoutForDate); setCurrentView('details'); } else { setEditingWorkout(null); setCurrentView('add'); } }} onStartWorkout={handleStartOrContinueWorkout} />;
+      case 'calendar': return <WorkoutCalendar workouts={workouts} routines={routines} onDateSelect={(date) => { setSelectedDate(date); const workoutForDate = workouts.find(w => w.date === date); if (workoutForDate) { setEditingWorkout(workoutForDate); setCurrentView('details'); } else { setEditingWorkout(null); setCurrentView('add'); } }} onStartWorkout={handleStartOrContinueWorkout} onStartRoutine={handleStartWorkoutFromRoutine} />;
       case 'add': return <AddWorkout date={selectedDate} existingWorkout={editingWorkout} routines={routines} workouts={workouts} onSave={handleSaveWorkout} onCancel={() => { setEditingWorkout(null); setCurrentView('calendar'); }} allLibraryExercises={allLibraryExercises} favoriteExercises={favoriteExercises} />;
-      case 'details': 
+      case 'details':
         const selectedWorkout = workouts.find(w => w.date === selectedDate);
-        return <WorkoutDetails 
-            workout={selectedWorkout} 
-            date={selectedDate} 
-            workouts={workouts} 
-            onEdit={() => { setEditingWorkout(selectedWorkout); setCurrentView('add'); }} 
-            onDelete={() => handleDeleteWorkout(selectedWorkout!.id)} 
-            onCancel={() => setCurrentView('calendar')}
+        return <WorkoutDetails
+          workout={selectedWorkout}
+          date={selectedDate}
+          workouts={workouts}
+          onEdit={() => { setEditingWorkout(selectedWorkout); setCurrentView('add'); }}
+          onDelete={() => handleDeleteWorkout(selectedWorkout!.id)}
+          onCancel={() => setCurrentView('calendar')}
         />;
       case 'progress': return <ProgressCharts workouts={workouts} />;
       case 'library': return <ExerciseLibrary onExerciseSelect={handleAddExerciseFromLibrary} allExercises={allLibraryExercises} favoriteExercises={favoriteExercises} onToggleFavorite={toggleFavoriteExercise} />;
@@ -217,27 +247,26 @@ function App() {
       { view: 'profile', icon: UserCog, label: 'Profil' },
     ];
     return (
-      <nav className="fixed bottom-0 left-0 right-0 bg-system-background-secondary/80 backdrop-blur-xl border-t border-system-separator">
+      <nav className="fixed bottom-0 left-0 right-0 bg-system-background-secondary/90 backdrop-blur-xl border-t border-system-separator z-50">
         <div className="max-w-md mx-auto flex justify-around px-2 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
-            {navItems.map(item => (
-              <button key={item.view} onClick={() => setCurrentView(item.view as View)} className={`flex flex-col items-center justify-center gap-1 w-1/5 py-1 rounded-lg transition-colors duration-200 ${currentView === item.view ? 'text-system-blue' : 'text-system-label-secondary hover:text-system-label'}`}>
-                  <item.icon size={24} strokeWidth={currentView === item.view ? 2.5 : 2} />
-                  <span className="text-xs font-medium">{item.label}</span>
-              </button>
-            ))}
+          {navItems.map(item => (
+            <button key={item.view} onClick={() => setCurrentView(item.view as View)} className={`flex flex-col items-center justify-center gap-1 w-1/5 py-1 rounded-lg transition-all duration-200 ${currentView === item.view ? 'text-system-blue scale-105' : 'text-system-label-secondary hover:text-system-label'}`}>
+              <item.icon size={24} strokeWidth={currentView === item.view ? 2.5 : 2} />
+              <span className="text-[10px] font-medium">{item.label}</span>
+            </button>
+          ))}
         </div>
       </nav>
     );
   };
 
   return (
-    <div className="min-h-screen bg-system-background flex flex-col max-w-md mx-auto">
-      <header className="sticky top-0 z-10 bg-system-background w-full">
+    <div className="min-h-screen bg-system-background flex flex-col max-w-md mx-auto font-sans antialiased">
+      <header className="sticky top-0 z-20 bg-system-background/80 backdrop-blur-md w-full border-b border-transparent">
         <div className="h-[env(safe-area-inset-top)]"></div>
       </header>
-      
-      {/* DEĞİŞİKLİK BURADA: overflow-y-auto kaldırıldı */}
-      <main className="flex-1 pb-24">
+
+      <main className="flex-1 pb-28">
         {renderContent()}
       </main>
 

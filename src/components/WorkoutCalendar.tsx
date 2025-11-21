@@ -3,16 +3,19 @@
 import React, { useState } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, parseISO, startOfWeek, endOfWeek } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, Dumbbell } from 'lucide-react';
-import { Workout } from '../App';
+import { ChevronLeft, ChevronRight, Dumbbell, PlayCircle, Zap } from 'lucide-react';
+import type { Workout } from '../App';
+import { Routine } from './RoutinesList';
 
 interface WorkoutCalendarProps {
   workouts: Workout[];
+  routines: Routine[]; // Yeni prop
   onDateSelect: (date: string) => void;
   onStartWorkout: () => void;
+  onStartRoutine: (routine: Routine) => void; // Yeni prop
 }
 
-const WorkoutCalendar: React.FC<WorkoutCalendarProps> = ({ workouts, onDateSelect, onStartWorkout }) => {
+const WorkoutCalendar: React.FC<WorkoutCalendarProps> = ({ workouts, routines, onDateSelect, onStartWorkout, onStartRoutine }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   const monthStart = startOfMonth(currentMonth);
@@ -40,37 +43,37 @@ const WorkoutCalendar: React.FC<WorkoutCalendarProps> = ({ workouts, onDateSelec
 
   return (
     <div className="p-4 space-y-6">
-      {/* Ay Navigasyonu ve Başlık (Yeni Tasarım) */}
-      <div className="flex items-center justify-between pt-4">
+      {/* Ay Navigasyonu ve Başlık */}
+      <div className="flex items-center justify-between pt-2 pb-2">
         <h1 className="text-3xl font-bold text-system-label capitalize">
           {format(currentMonth, 'MMMM yyyy', { locale: tr })}
         </h1>
-        <div className="flex items-center gap-2">
-            <button
+        <div className="flex items-center gap-1 bg-system-fill rounded-full p-1">
+          <button
             onClick={handlePrevMonth}
-            className="p-2 bg-system-fill rounded-full text-system-label-secondary"
-            >
+            className="p-2 rounded-full text-system-label hover:bg-system-background-tertiary transition-colors"
+          >
             <ChevronLeft size={20} />
-            </button>
-            <button
+          </button>
+          <button
             onClick={handleNextMonth}
-            className="p-2 bg-system-fill rounded-full text-system-label-secondary"
-            >
+            className="p-2 rounded-full text-system-label hover:bg-system-background-tertiary transition-colors"
+          >
             <ChevronRight size={20} />
-            </button>
+          </button>
         </div>
       </div>
 
-      {/* Takvim Grid'i (Eski Stil + Yeni Renkler) */}
-      <div className="bg-system-background-secondary rounded-xl p-4">
-        <div className="grid grid-cols-7 mb-2">
+      {/* Takvim Grid'i */}
+      <div className="bg-system-background-secondary rounded-2xl p-4 shadow-sm border border-system-separator/10">
+        <div className="grid grid-cols-7 mb-3">
           {['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'].map(day => (
-            <div key={day} className="text-center text-xs font-semibold text-system-label-secondary py-2">
+            <div key={day} className="text-center text-xs font-bold text-system-label-tertiary uppercase tracking-wider">
               {day}
             </div>
           ))}
         </div>
-        <div className="grid grid-cols-7 gap-1">
+        <div className="grid grid-cols-7 gap-2">
           {monthDays.map(day => {
             const dateStr = format(day, 'yyyy-MM-dd');
             const hasWorkout = workoutDates.has(dateStr);
@@ -82,18 +85,16 @@ const WorkoutCalendar: React.FC<WorkoutCalendarProps> = ({ workouts, onDateSelec
                 key={dateStr}
                 onClick={() => handleDateClick(day)}
                 className={`
-                  aspect-square p-2 rounded-xl text-lg font-medium transition-all duration-200 ease-in-out
-                  flex flex-col items-center justify-center relative
+                  aspect-square rounded-xl text-lg font-medium transition-all duration-200 ease-in-out relative
+                  flex flex-col items-center justify-center
                   ${isCurrentMonth ? 'text-system-label' : 'text-system-label-quaternary'}
-                  ${isCurrentDay ? 'bg-system-fill ring-2 ring-system-blue' : ''}
-                  ${!isCurrentDay && hasWorkout ? 'bg-system-green/20' : ''}
-                  hover:bg-system-fill
-                  active:scale-95
+                  ${isCurrentDay ? 'bg-system-blue text-white shadow-lg shadow-system-blue/30' : 'hover:bg-system-fill'}
+                  ${!isCurrentDay && hasWorkout ? 'bg-system-green/10 text-system-green font-bold border border-system-green/20' : ''}
                 `}
               >
                 <span>{format(day, 'd')}</span>
-                {hasWorkout && (
-                  <div className="absolute bottom-1.5 w-1.5 h-1.5 bg-system-green rounded-full"></div>
+                {!isCurrentDay && hasWorkout && (
+                  <div className="absolute bottom-1.5 w-1 h-1 bg-system-green rounded-full"></div>
                 )}
               </button>
             );
@@ -101,40 +102,69 @@ const WorkoutCalendar: React.FC<WorkoutCalendarProps> = ({ workouts, onDateSelec
         </div>
       </div>
 
-      {/* Antrenmana Başla Butonu (Yeni Tasarım) */}
-      <div className="px-4">
+      {/* Antrenmana Başla Butonu */}
+      <div className="px-2">
         <button
           onClick={onStartWorkout}
-          className="w-full flex items-center justify-center gap-3 py-3 px-6 bg-system-blue text-white rounded-xl font-semibold text-lg shadow-lg hover:opacity-90 transition-opacity active:scale-95"
+          className={`w-full flex items-center justify-center gap-3 py-4 px-6 rounded-2xl font-bold text-lg shadow-xl transition-all active:scale-95 ${workoutForToday
+            ? 'bg-gradient-to-r from-system-orange to-orange-500 text-white shadow-orange-500/20'
+            : 'bg-gradient-to-r from-system-blue to-blue-600 text-white shadow-system-blue/30'
+            }`}
         >
-          <Dumbbell size={22} />
-          {workoutForToday ? 'Antrenmana Devam Et' : 'Antrenmana Başla'}
+          {workoutForToday ? <Dumbbell size={24} /> : <PlayCircle size={24} />}
+          {workoutForToday ? 'Antrenmana Devam Et' : 'Bugünkü Antrenmanı Başlat'}
         </button>
       </div>
 
-      {/* İstatistikler Kartı (Yeni Tasarım) */}
-      <div className="bg-system-background-secondary rounded-xl p-4">
-        <h2 className="font-semibold text-system-label mb-3">Bu Ayın Özeti</h2>
-        <div className="grid grid-cols-2 gap-px bg-system-separator rounded-lg overflow-hidden">
-            <div className="text-center bg-system-background-secondary p-4">
-                <div className="text-2xl font-bold text-system-blue">
-                {workouts.filter(w => 
-                    format(parseISO(w.date), 'yyyy-MM') === format(currentMonth, 'yyyy-MM')
-                ).length}
+      {/* Hızlı Başlangıç Bölümü - Taşındı */}
+      {routines.length > 0 && !workoutForToday && (
+        <div>
+          <h2 className="text-sm font-bold text-system-label-secondary mb-3 uppercase tracking-wider px-1 flex items-center gap-1">
+            <Zap size={14} className="text-system-yellow" /> Hızlı Başlat
+          </h2>
+          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4">
+            {routines.map(routine => (
+              <button
+                key={routine.id}
+                onClick={() => onStartRoutine(routine)}
+                className="flex-shrink-0 w-40 p-4 rounded-2xl bg-system-background-secondary border border-system-separator/10 flex flex-col items-start gap-2 shadow-sm active:scale-95 transition-transform hover:bg-system-background-tertiary"
+              >
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-system-blue to-blue-600 flex items-center justify-center text-white shadow-lg shadow-system-blue/20">
+                  <PlayCircle size={20} />
                 </div>
-                <div className="text-sm text-system-label-secondary">Toplam Antrenman</div>
-            </div>
-            <div className="text-center bg-system-background-secondary p-4">
-                <div className="text-2xl font-bold text-system-orange">
-                {workouts.filter(w => 
-                    format(parseISO(w.date), 'yyyy-MM') === format(currentMonth, 'yyyy-MM')
-                ).reduce((total, workout) => 
-                    total + workout.exercises.reduce((exTotal, exercise) => 
-                    exTotal + exercise.sets.length, 0), 0
-                )}
+                <div className="text-left">
+                  <h3 className="font-bold text-system-label text-sm truncate w-32">{routine.name}</h3>
+                  <p className="text-xs text-system-label-secondary">{routine.exercises.length} hareket</p>
                 </div>
-                <div className="text-sm text-system-label-secondary">Toplam Set</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* İstatistikler Kartı */}
+      <div className="bg-system-background-secondary rounded-2xl p-6 border border-system-separator/10">
+        <h2 className="font-bold text-system-label mb-4 text-lg">Bu Ayın Özeti</h2>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="flex flex-col items-center justify-center bg-system-background-tertiary/50 p-4 rounded-xl">
+            <div className="text-3xl font-bold text-system-blue mb-1">
+              {workouts.filter(w =>
+                format(parseISO(w.date), 'yyyy-MM') === format(currentMonth, 'yyyy-MM')
+              ).length}
             </div>
+            <div className="text-xs font-medium text-system-label-secondary uppercase tracking-wide">Antrenman</div>
+          </div>
+          <div className="flex flex-col items-center justify-center bg-system-background-tertiary/50 p-4 rounded-xl">
+            <div className="text-3xl font-bold text-system-orange mb-1">
+              {workouts.filter(w =>
+                format(parseISO(w.date), 'yyyy-MM') === format(currentMonth, 'yyyy-MM')
+              ).reduce((total, workout) =>
+                total + workout.exercises.reduce((exTotal, exercise) =>
+                  exTotal + exercise.sets.length, 0), 0
+              )}
+            </div>
+            <div className="text-xs font-medium text-system-label-secondary uppercase tracking-wide">Toplam Set</div>
+          </div>
         </div>
       </div>
     </div>
