@@ -30,6 +30,7 @@ export interface Workout {
   startTime?: string;
   endTime?: string;
   duration?: number;
+  routine_id?: number; // GÜNCELLENDİ: Bigint olduğu için number
   exercises: Exercise[];
 }
 
@@ -84,7 +85,8 @@ function App() {
       const formattedWorkouts = (workoutsRes.data || []).map((w: any) => ({
         ...w,
         startTime: w.start_time || w.startTime,
-        endTime: w.end_time || w.endTime
+        endTime: w.end_time || w.endTime,
+        routine_id: w.routine_id // DB'den routine_id çekiyoruz
       }));
 
       setWorkouts(formattedWorkouts as Workout[]);
@@ -98,22 +100,6 @@ function App() {
           avatarUrl: profileRes.data.avatar_url
         });
       }
-
-      // --- ÖNEMLİ GÜNCELLEME: Aktif Antrenman Kontrolü ---
-      // Eğer yerel depolamada kayıtlı bir başlangıç zamanı varsa, antrenman devam ediyor demektir.
-      const savedStartTime = localStorage.getItem('currentWorkoutStartTime');
-      if (savedStartTime) {
-        const todayStr = new Date().toISOString().split('T')[0];
-        // Bugün için veritabanından gelen bir antrenman kaydı var mı kontrol et
-        const workoutForToday = formattedWorkouts.find((w: any) => w.date === todayStr);
-
-        setSelectedDate(todayStr);
-        // Varsa mevcut antrenmanı, yoksa null (yeni antrenman) olarak ayarla
-        setEditingWorkout((workoutForToday as Workout) || null);
-        // Doğrudan antrenman sayfasına yönlendir
-        setCurrentView('add');
-      }
-      // ----------------------------------------------------
 
     } catch (error) { console.error("Veri çekme hatası:", error); }
     finally { setLoading(false); }
@@ -152,7 +138,8 @@ function App() {
         exercises: workoutData.exercises,
         start_time: workoutData.startTime,
         end_time: workoutData.endTime,
-        duration: workoutData.duration
+        duration: workoutData.duration,
+        routine_id: workoutData.routine_id // GÜNCELLENDİ: ID kaydediyoruz
       };
 
       let savedWorkoutId = workoutToUpdate?.id;
@@ -188,14 +175,15 @@ function App() {
             exercises: workoutData.exercises,
             startTime: workoutData.startTime,
             endTime: workoutData.endTime,
-            duration: workoutData.duration
+            duration: workoutData.duration,
+            routine_id: workoutData.routine_id
           });
         }
       }
 
     } catch (error: any) {
       console.error("Antrenman kaydedilirken hata oluştu:", error);
-      alert(`Kayıt sırasında bir hata oluştu: ${error.message}`);
+      alert(`Kayıt sırasında bir hata oluştu: ${error.message}.`);
       throw error;
     }
   };
@@ -249,9 +237,27 @@ function App() {
   };
 
   const handleDeleteWorkout = async (workoutId: string) => {
-    await supabase.from('workouts').delete().eq('id', workoutId);
-    await fetchAllData();
+    const workoutToDelete = workouts.find(w => w.id === workoutId);
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    if (workoutToDelete && workoutToDelete.date === todayStr) {
+      localStorage.removeItem('currentWorkoutStartTime');
+    }
+
+    setWorkouts(prev => prev.filter(w => w.id !== workoutId));
+
     setCurrentView('calendar');
+
+    try {
+      const { error } = await supabase.from('workouts').delete().eq('id', workoutId);
+      if (error) throw error;
+
+      await fetchAllData();
+    } catch (error: any) {
+      console.error("Silme hatası:", error);
+      alert("Antrenman silinirken bir hata oluştu.");
+      await fetchAllData();
+    }
   };
 
   const handleDeleteRoutine = async (routineId: string) => {
@@ -299,7 +305,8 @@ function App() {
         id: 'new',
         user_id: session?.user.id || '',
         date: todayStr,
-        exercises: newExercisesFromRoutine
+        exercises: newExercisesFromRoutine,
+        routine_id: Number(routine.id) // ID'yi aktar
       });
     }
     setSelectedDate(todayStr);

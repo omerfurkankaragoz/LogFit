@@ -25,6 +25,11 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
     return existingWorkout ? existingWorkout.exercises : [];
   });
 
+  // Rutin ID State'i
+  const [workoutRoutineId, setWorkoutRoutineId] = useState<number | undefined>(() => {
+    return existingWorkout ? existingWorkout.routine_id : undefined;
+  });
+
   const [isRoutinePickerOpen, setRoutinePickerOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -37,10 +42,8 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
   const [showLargeImage, setShowLargeImage] = useState(false);
   const [currentLargeImageUrl, setCurrentLargeImageUrl] = useState<string | null>(null);
 
-  // State güncellemelerini takip etmek için ref
   const loadedWorkoutId = useRef<string | null>(existingWorkout?.id || null);
 
-  // BUGÜN KONTROLÜ
   const isToday = useMemo(() => {
     const todayStr = new Date().toISOString().split('T')[0];
     return date === todayStr;
@@ -83,6 +86,7 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
 
     if (loadedWorkoutId.current !== currentId) {
       setWorkoutExercises(existingWorkout ? existingWorkout.exercises : []);
+      setWorkoutRoutineId(existingWorkout ? existingWorkout.routine_id : undefined);
       loadedWorkoutId.current = currentId;
     }
   }, [existingWorkout?.id]);
@@ -172,6 +176,7 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
       });
     if (newExercisesFromRoutine.length > 0) {
       setWorkoutExercises(prev => [...prev, ...newExercisesFromRoutine]);
+      setWorkoutRoutineId(Number(routine.id)); // Rutin ID'sini set et
     }
     setRoutinePickerOpen(false);
   };
@@ -223,7 +228,8 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
         exercises: exercisesToSave,
         startTime: finalStartTimeStr,
         endTime: endTime,
-        duration: finalDuration
+        duration: finalDuration,
+        routine_id: workoutRoutineId
       }, true);
       localStorage.removeItem('currentWorkoutStartTime');
       alert('Antrenman süresi 2 saati aştığı için otomatik olarak sonlandırıldı.');
@@ -240,7 +246,8 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
         exercises: exercisesToSave,
         startTime: startTime || undefined,
         endTime: undefined,
-        duration: elapsedSeconds
+        duration: elapsedSeconds,
+        routine_id: workoutRoutineId
       }, false);
 
       onCancel();
@@ -249,13 +256,10 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
     }
   };
 
-  // --- GÜNCELLENEN İPTAL MANTIĞI ---
   const handleCancel = () => {
-    // Eğer hareket eklenmemişse (veri girişi yoksa), sayacı sıfırla.
     if (workoutExercises.length === 0) {
       localStorage.removeItem('currentWorkoutStartTime');
     }
-    // Eğer hareket varsa, sayaç localStorage'da kalır ve devam eder.
     onCancel();
   };
 
@@ -446,7 +450,6 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
 
           <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
             <h1 className="text-lg font-bold text-system-label">Antrenman</h1>
-            {/* Sadece bugünse veya sayaç aktifse (0'dan büyükse) sayacı göster */}
             {(isToday || elapsedSeconds > 0) && (
               <div className={`flex items-center gap-1 font-mono text-sm font-medium px-2 py-0.5 rounded-md mt-0.5 ${isToday ? 'text-system-green bg-system-green/10' : 'text-system-label-secondary bg-system-fill'}`}>
                 <Clock size={12} />

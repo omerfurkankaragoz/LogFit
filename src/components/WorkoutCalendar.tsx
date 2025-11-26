@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, parseISO, startOfWeek, endOfWeek } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, Dumbbell, PlayCircle, Zap, UserCircle, CheckCircle2, Eye, Activity } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Dumbbell, PlayCircle, Zap, UserCircle, CheckCircle2, Eye, Activity, ArrowLeft } from 'lucide-react';
 import type { Workout } from '../App';
 import { Routine } from './RoutinesList';
 
@@ -21,6 +21,7 @@ interface WorkoutCalendarProps {
 const WorkoutCalendar: React.FC<WorkoutCalendarProps> = ({ workouts, routines, onDateSelect, onStartWorkout, onStartRoutine, userProfile, onProfileClick, onFinishWorkout }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [hasActiveLocalSession, setHasActiveLocalSession] = useState(false);
+  const [showHistory, setShowHistory] = useState(false); // YENİ: Geçmişi gösterme state'i
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -36,7 +37,7 @@ const WorkoutCalendar: React.FC<WorkoutCalendarProps> = ({ workouts, routines, o
   const last5Workouts = workouts.slice(0, 5);
 
   // Antrenman bitmiş mi kontrolü
-  const isWorkoutFinished = workoutForToday && (workoutForToday.duration !== undefined && workoutForToday.duration !== null && workoutForToday.duration > 0);
+  const isWorkoutFinished = workoutForToday && workoutForToday.endTime;
 
   useEffect(() => {
     const savedStartTime = localStorage.getItem('currentWorkoutStartTime');
@@ -74,6 +75,68 @@ const WorkoutCalendar: React.FC<WorkoutCalendarProps> = ({ workouts, routines, o
     return `${m}dk`;
   };
 
+  // Ortak Kart Render Fonksiyonu (Hem Son 5 hem de Tüm Liste için)
+  const renderWorkoutCard = (workout: Workout) => {
+    return (
+      <button
+        key={workout.id}
+        onClick={() => onDateSelect(workout.date)}
+        className="w-full p-4 bg-system-background-secondary rounded-2xl border border-system-separator/10 flex items-center justify-between active:scale-[0.98] transition-transform hover:bg-system-background-tertiary"
+      >
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-full bg-system-background-tertiary flex items-center justify-center text-system-blue">
+            <Activity size={24} />
+          </div>
+          <div className="text-left">
+            <h3 className="font-bold text-system-label text-base">
+              Antrenman
+            </h3>
+            <p className="text-xs text-system-label-secondary mt-0.5">
+              {format(parseISO(workout.date), 'd MMMM yyyy', { locale: tr })}
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-col items-end gap-1">
+          {workout.duration && (
+            <div className="px-2 py-1 bg-system-green/10 rounded-md">
+              <p className="text-xs font-medium text-system-green">
+                {formatDuration(workout.duration)}
+              </p>
+            </div>
+          )}
+          <p className="text-xs text-system-label-tertiary">
+            {workout.exercises.length} hareket
+          </p>
+        </div>
+      </button>
+    );
+  };
+
+  // --- EĞER GEÇMİŞ SAYFASI AÇIKSA ---
+  if (showHistory) {
+    return (
+      <div className="p-4 space-y-6 animate-in slide-in-from-right duration-200 min-h-full">
+        <div className="flex items-center gap-3 pt-4 pb-2 sticky top-0 bg-system-background z-10">
+          <button onClick={() => setShowHistory(false)} className="text-system-blue p-2 -ml-2 hover:bg-system-background-tertiary rounded-full transition-colors">
+            <ArrowLeft size={28} />
+          </button>
+          <h1 className="text-3xl font-bold text-system-label">Geçmiş</h1>
+        </div>
+
+        <div className="space-y-3 pb-24">
+          {workouts.length > 0 ? (
+            workouts.map(workout => renderWorkoutCard(workout))
+          ) : (
+            <div className="text-center py-20">
+              <p className="text-system-label-secondary">Henüz kaydedilmiş antrenman yok.</p>
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // --- NORMAL TAKVİM GÖRÜNÜMÜ ---
   return (
     <div>
       {/* Header */}
@@ -245,45 +308,20 @@ const WorkoutCalendar: React.FC<WorkoutCalendarProps> = ({ workouts, routines, o
           </div>
         </div>
 
-        {/* Son 5 Antrenman Listesi (GÜNCELLENDİ: Durum metinleri kaldırıldı) */}
+        {/* Son 5 Antrenman Listesi */}
         {last5Workouts.length > 0 && (
           <div className="space-y-3 pb-4">
-            <h2 className="font-bold text-system-label text-lg px-1">Son Antrenmanlar</h2>
+            <div className="flex items-center justify-between px-1">
+              <h2 className="font-bold text-system-label text-lg">Son Antrenmanlar</h2>
+              <button
+                onClick={() => setShowHistory(true)}
+                className="text-system-blue text-sm font-semibold active:opacity-70 transition-opacity"
+              >
+                Tümünü Gör
+              </button>
+            </div>
             <div className="space-y-3">
-              {last5Workouts.map(workout => (
-                <button
-                  key={workout.id}
-                  onClick={() => onDateSelect(workout.date)}
-                  className="w-full p-4 bg-system-background-secondary rounded-2xl border border-system-separator/10 flex items-center justify-between active:scale-[0.98] transition-transform hover:bg-system-background-tertiary"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-system-background-tertiary flex items-center justify-center text-system-blue">
-                      <Activity size={24} />
-                    </div>
-                    <div className="text-left">
-                      <h3 className="font-bold text-system-label text-base">
-                        Antrenman
-                      </h3>
-                      <p className="text-xs text-system-label-secondary mt-0.5">
-                        {format(parseISO(workout.date), 'd MMMM yyyy', { locale: tr })}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-end gap-1">
-                    {/* Sadece süre varsa göster, yoksa boş bırak (metin etiketi yok) */}
-                    {workout.duration && (
-                      <div className="px-2 py-1 bg-system-green/10 rounded-md">
-                        <p className="text-xs font-medium text-system-green">
-                          {formatDuration(workout.duration)}
-                        </p>
-                      </div>
-                    )}
-                    <p className="text-xs text-system-label-tertiary">
-                      {workout.exercises.length} hareket
-                    </p>
-                  </div>
-                </button>
-              ))}
+              {last5Workouts.map(workout => renderWorkoutCard(workout))}
             </div>
           </div>
         )}
