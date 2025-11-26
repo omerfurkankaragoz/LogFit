@@ -222,7 +222,7 @@ const WorkoutDetails: React.FC<WorkoutDetailsProps> = ({
                         <span className="font-medium text-system-label">{currentMax} kg</span>
                         {previousMax > 0 && (
                           <span className={`text-xs font-semibold ${currentMax > previousMax ? 'text-system-green' :
-                              currentMax < previousMax ? 'text-system-red' : 'text-system-label-secondary'
+                            currentMax < previousMax ? 'text-system-red' : 'text-system-label-secondary'
                             }`}>
                             ({currentMax > previousMax ? '+' : ''}{(currentMax - previousMax).toFixed(1)})
                           </span>
@@ -235,7 +235,7 @@ const WorkoutDetails: React.FC<WorkoutDetailsProps> = ({
                         <span className="font-medium text-system-label">{currentVolume.toFixed(0)} kg</span>
                         {previousVolume > 0 && (
                           <span className={`text-xs font-semibold ${currentVolume > previousVolume ? 'text-system-green' :
-                              currentVolume < previousVolume ? 'text-system-red' : 'text-system-label-secondary'
+                            currentVolume < previousVolume ? 'text-system-red' : 'text-system-label-secondary'
                             }`}>
                             ({currentVolume > previousVolume ? '+' : ''}{(currentVolume - previousVolume).toFixed(0)})
                           </span>
