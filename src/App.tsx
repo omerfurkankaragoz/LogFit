@@ -30,7 +30,7 @@ export interface Workout {
   startTime?: string;
   endTime?: string;
   duration?: number;
-  routine_id?: string; // GÜNCELLENDİ: ID geri geldi
+  routine_id?: number;
   exercises: Exercise[];
 }
 
@@ -86,7 +86,7 @@ function App() {
         ...w,
         startTime: w.start_time || w.startTime,
         endTime: w.end_time || w.endTime,
-        routine_id: w.routine_id // DB'den çekiyoruz
+        routine_id: w.routine_id
       }));
 
       setWorkouts(formattedWorkouts as Workout[]);
@@ -99,6 +99,17 @@ function App() {
           fullName: profileRes.data.full_name,
           avatarUrl: profileRes.data.avatar_url
         });
+      }
+
+      // --- EKLENDİ: Uygulama açıldığında devam eden antrenman kontrolü ---
+      const savedStartTime = localStorage.getItem('currentWorkoutStartTime');
+      if (savedStartTime) {
+        const todayStr = new Date().toISOString().split('T')[0];
+        const workoutForToday = formattedWorkouts.find((w: any) => w.date === todayStr);
+
+        setSelectedDate(todayStr);
+        setEditingWorkout((workoutForToday as Workout) || null);
+        setCurrentView('add');
       }
 
     } catch (error) { console.error("Veri çekme hatası:", error); }
@@ -139,7 +150,7 @@ function App() {
         start_time: workoutData.startTime,
         end_time: workoutData.endTime,
         duration: workoutData.duration,
-        routine_id: workoutData.routine_id // ID'yi kaydediyoruz
+        routine_id: workoutData.routine_id
       };
 
       let savedWorkoutId = workoutToUpdate?.id;
@@ -304,7 +315,7 @@ function App() {
         user_id: session?.user.id || '',
         date: todayStr,
         exercises: newExercisesFromRoutine,
-        routine_id: routine.id // Rutin ID'sini al
+        routine_id: Number(routine.id)
       });
     }
     setSelectedDate(todayStr);

@@ -44,6 +44,13 @@ const WorkoutCalendar: React.FC<WorkoutCalendarProps> = ({ workouts, routines, o
     }
   }, []);
 
+  // YENİ EKLENDİ: Geçmiş sayfasına geçince en üste kaydır
+  useEffect(() => {
+    if (showHistory) {
+      window.scrollTo(0, 0);
+    }
+  }, [showHistory]);
+
   const handlePrevMonth = () => {
     setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1));
   };
@@ -75,7 +82,7 @@ const WorkoutCalendar: React.FC<WorkoutCalendarProps> = ({ workouts, routines, o
 
   // Ortak Kart Render Fonksiyonu
   const renderWorkoutCard = (workout: Workout) => {
-    // GÜNCELLENDİ: Rutin ismini bul
+    // Rutin ismini ID ile bul
     const foundRoutine = routines.find(r => String(r.id) === String(workout.routine_id));
     const routineName = foundRoutine ? foundRoutine.name : 'Serbest Antrenman';
 
