@@ -21,7 +21,7 @@ interface WorkoutCalendarProps {
 const WorkoutCalendar: React.FC<WorkoutCalendarProps> = ({ workouts, routines, onDateSelect, onStartWorkout, onStartRoutine, userProfile, onProfileClick, onFinishWorkout }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [hasActiveLocalSession, setHasActiveLocalSession] = useState(false);
-  const [showHistory, setShowHistory] = useState(false); // YENİ: Geçmişi gösterme state'i
+  const [showHistory, setShowHistory] = useState(false);
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -33,10 +33,8 @@ const WorkoutCalendar: React.FC<WorkoutCalendarProps> = ({ workouts, routines, o
   const todayStr = new Date().toISOString().split('T')[0];
   const workoutForToday = workouts.find(w => w.date === todayStr);
 
-  // Son 5 antrenmanı al
   const last5Workouts = workouts.slice(0, 5);
 
-  // Antrenman bitmiş mi kontrolü
   const isWorkoutFinished = workoutForToday && workoutForToday.endTime;
 
   useEffect(() => {
@@ -75,8 +73,12 @@ const WorkoutCalendar: React.FC<WorkoutCalendarProps> = ({ workouts, routines, o
     return `${m}dk`;
   };
 
-  // Ortak Kart Render Fonksiyonu (Hem Son 5 hem de Tüm Liste için)
+  // Ortak Kart Render Fonksiyonu
   const renderWorkoutCard = (workout: Workout) => {
+    // GÜNCELLENDİ: Rutin ismini bul
+    const foundRoutine = routines.find(r => String(r.id) === String(workout.routine_id));
+    const routineName = foundRoutine ? foundRoutine.name : 'Serbest Antrenman';
+
     return (
       <button
         key={workout.id}
@@ -89,7 +91,7 @@ const WorkoutCalendar: React.FC<WorkoutCalendarProps> = ({ workouts, routines, o
           </div>
           <div className="text-left">
             <h3 className="font-bold text-system-label text-base">
-              Antrenman
+              {routineName}
             </h3>
             <p className="text-xs text-system-label-secondary mt-0.5">
               {format(parseISO(workout.date), 'd MMMM yyyy', { locale: tr })}
@@ -112,7 +114,6 @@ const WorkoutCalendar: React.FC<WorkoutCalendarProps> = ({ workouts, routines, o
     );
   };
 
-  // --- EĞER GEÇMİŞ SAYFASI AÇIKSA ---
   if (showHistory) {
     return (
       <div className="p-4 space-y-6 animate-in slide-in-from-right duration-200 min-h-full">
@@ -136,7 +137,6 @@ const WorkoutCalendar: React.FC<WorkoutCalendarProps> = ({ workouts, routines, o
     )
   }
 
-  // --- NORMAL TAKVİM GÖRÜNÜMÜ ---
   return (
     <div>
       {/* Header */}

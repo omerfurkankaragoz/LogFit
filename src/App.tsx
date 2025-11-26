@@ -30,7 +30,7 @@ export interface Workout {
   startTime?: string;
   endTime?: string;
   duration?: number;
-  routine_id?: number; // GÜNCELLENDİ: Bigint olduğu için number
+  routine_id?: string; // GÜNCELLENDİ: ID geri geldi
   exercises: Exercise[];
 }
 
@@ -86,7 +86,7 @@ function App() {
         ...w,
         startTime: w.start_time || w.startTime,
         endTime: w.end_time || w.endTime,
-        routine_id: w.routine_id // DB'den routine_id çekiyoruz
+        routine_id: w.routine_id // DB'den çekiyoruz
       }));
 
       setWorkouts(formattedWorkouts as Workout[]);
@@ -139,7 +139,7 @@ function App() {
         start_time: workoutData.startTime,
         end_time: workoutData.endTime,
         duration: workoutData.duration,
-        routine_id: workoutData.routine_id // GÜNCELLENDİ: ID kaydediyoruz
+        routine_id: workoutData.routine_id // ID'yi kaydediyoruz
       };
 
       let savedWorkoutId = workoutToUpdate?.id;
@@ -183,7 +183,7 @@ function App() {
 
     } catch (error: any) {
       console.error("Antrenman kaydedilirken hata oluştu:", error);
-      alert(`Kayıt sırasında bir hata oluştu: ${error.message}.`);
+      alert(`Kayıt sırasında bir hata oluştu: ${error.message}`);
       throw error;
     }
   };
@@ -245,13 +245,11 @@ function App() {
     }
 
     setWorkouts(prev => prev.filter(w => w.id !== workoutId));
-
     setCurrentView('calendar');
 
     try {
       const { error } = await supabase.from('workouts').delete().eq('id', workoutId);
       if (error) throw error;
-
       await fetchAllData();
     } catch (error: any) {
       console.error("Silme hatası:", error);
@@ -306,7 +304,7 @@ function App() {
         user_id: session?.user.id || '',
         date: todayStr,
         exercises: newExercisesFromRoutine,
-        routine_id: Number(routine.id) // ID'yi aktar
+        routine_id: routine.id // Rutin ID'sini al
       });
     }
     setSelectedDate(todayStr);

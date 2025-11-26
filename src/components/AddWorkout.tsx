@@ -25,8 +25,8 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
     return existingWorkout ? existingWorkout.exercises : [];
   });
 
-  // Rutin ID State'i
-  const [workoutRoutineId, setWorkoutRoutineId] = useState<number | undefined>(() => {
+  // GÜNCELLENDİ: Rutin ID'sini tutan state
+  const [workoutRoutineId, setWorkoutRoutineId] = useState<string | undefined>(() => {
     return existingWorkout ? existingWorkout.routine_id : undefined;
   });
 
@@ -86,6 +86,7 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
 
     if (loadedWorkoutId.current !== currentId) {
       setWorkoutExercises(existingWorkout ? existingWorkout.exercises : []);
+      // GÜNCELLENDİ: Rutin ID'sini güncelle
       setWorkoutRoutineId(existingWorkout ? existingWorkout.routine_id : undefined);
       loadedWorkoutId.current = currentId;
     }
@@ -176,7 +177,8 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
       });
     if (newExercisesFromRoutine.length > 0) {
       setWorkoutExercises(prev => [...prev, ...newExercisesFromRoutine]);
-      setWorkoutRoutineId(Number(routine.id)); // Rutin ID'sini set et
+      // GÜNCELLENDİ: Rutin ID'sini set et
+      setWorkoutRoutineId(routine.id);
     }
     setRoutinePickerOpen(false);
   };
@@ -229,7 +231,7 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
         startTime: finalStartTimeStr,
         endTime: endTime,
         duration: finalDuration,
-        routine_id: workoutRoutineId
+        routine_id: workoutRoutineId // GÜNCELLENDİ: ID gönderiliyor
       }, true);
       localStorage.removeItem('currentWorkoutStartTime');
       alert('Antrenman süresi 2 saati aştığı için otomatik olarak sonlandırıldı.');
@@ -247,7 +249,7 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
         startTime: startTime || undefined,
         endTime: undefined,
         duration: elapsedSeconds,
-        routine_id: workoutRoutineId
+        routine_id: workoutRoutineId // GÜNCELLENDİ: ID gönderiliyor
       }, false);
 
       onCancel();
