@@ -1,7 +1,7 @@
 // src/components/AddWorkout.tsx
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Plus, Trash2, Search, X, Star, Radar, BadgePlus, CheckCircle2, Clock, GripVertical, Save } from 'lucide-react';
+import { Plus, Trash2, Search, X, Star, Radar, BadgePlus, Clock, Save } from 'lucide-react';
 import { Workout, Exercise } from '../App';
 import { Routine } from './RoutinesList';
 import { Exercise as LibraryExercise } from '../services/exerciseApi';
@@ -25,7 +25,7 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
     return existingWorkout ? existingWorkout.exercises : [];
   });
 
-  // Rutin ID State'i (Geri eklendi)
+  // Rutin ID State'i
   const [workoutRoutineId, setWorkoutRoutineId] = useState<number | undefined>(() => {
     return existingWorkout ? existingWorkout.routine_id : undefined;
   });
@@ -42,10 +42,8 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
   const [showLargeImage, setShowLargeImage] = useState(false);
   const [currentLargeImageUrl, setCurrentLargeImageUrl] = useState<string | null>(null);
 
-  // State güncellemelerini takip etmek için ref
   const loadedWorkoutId = useRef<string | null>(existingWorkout?.id || null);
 
-  // BUGÜN KONTROLÜ
   const isToday = useMemo(() => {
     const todayStr = new Date().toISOString().split('T')[0];
     return date === todayStr;
@@ -88,7 +86,7 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
 
     if (loadedWorkoutId.current !== currentId) {
       setWorkoutExercises(existingWorkout ? existingWorkout.exercises : []);
-      setWorkoutRoutineId(existingWorkout ? existingWorkout.routine_id : undefined); // ID'yi güncelle
+      setWorkoutRoutineId(existingWorkout ? existingWorkout.routine_id : undefined);
       loadedWorkoutId.current = currentId;
     }
   }, [existingWorkout?.id]);
@@ -153,6 +151,21 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
+  // Önceki antrenman verisini bulma fonksiyonu (TEKRAR EKLENDİ)
+  const getPreviousExerciseData = (exerciseName: string): Exercise | null => {
+    if (!exerciseName) return null;
+    // Tarihe göre eskiden yeniye sıralayıp, bugünden önceki en son kaydı bulalım
+    const pastWorkouts = workouts
+      .filter(w => new Date(w.date) < new Date(date))
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    for (const prevWorkout of pastWorkouts) {
+      const exercise = prevWorkout.exercises.find(ex => ex.name.toLowerCase() === exerciseName.toLowerCase());
+      if (exercise) return exercise;
+    }
+    return null;
+  };
+
   const handleAddExerciseToWorkout = (exercise: LibraryExercise) => {
     const newExercise: Exercise = {
       id: `lib-${exercise.id}-${Date.now()}`,
@@ -178,7 +191,7 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
       });
     if (newExercisesFromRoutine.length > 0) {
       setWorkoutExercises(prev => [...prev, ...newExercisesFromRoutine]);
-      setWorkoutRoutineId(Number(routine.id)); // Rutin ID'sini set et
+      setWorkoutRoutineId(Number(routine.id));
     }
     setRoutinePickerOpen(false);
   };
@@ -249,7 +262,7 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
         startTime: startTime || undefined,
         endTime: undefined,
         duration: elapsedSeconds,
-        routine_id: workoutRoutineId // ID'yi gönder
+        routine_id: workoutRoutineId
       }, false);
 
       onCancel();
@@ -362,6 +375,9 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
         const imageUrl = getImageUrl(libraryExercise?.gifUrl);
         const isEditable = exercise.id.startsWith('manual-');
 
+        // GÜNCELLENDİ: Önceki veriyi çek
+        const previousExercise = getPreviousExerciseData(exercise.name);
+
         return (
           <div key={exercise.id} className="bg-system-background-secondary rounded-2xl overflow-hidden shadow-sm border border-system-separator/10">
             <div className="p-4 flex items-start gap-4 border-b border-system-separator/20 bg-system-background-tertiary/30">
@@ -393,11 +409,22 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
 
             <div className="px-4 pb-4 space-y-3">
               {exercise.sets.map((set, setIndex) => {
+                // GÜNCELLENDİ: Önceki set verisini eşleştir
+                const previousSet = previousExercise?.sets[setIndex];
+
                 return (
                   <React.Fragment key={setIndex}>
                     <div className="grid grid-cols-[0.8fr,1.2fr,1.2fr,auto] gap-3 items-center">
+                      {/* GÜNCELLENDİ: Önceki veriyi göster */}
                       <div className="h-12 bg-system-fill-secondary rounded-xl flex flex-col items-center justify-center text-xs text-system-label-secondary font-medium">
-                        -
+                        {previousSet ? (
+                          <>
+                            <span className="text-system-label">{previousSet.weight}kg</span>
+                            <span className="text-[10px] opacity-70">{previousSet.reps} tekrar</span>
+                          </>
+                        ) : (
+                          <span className="opacity-50">-</span>
+                        )}
                       </div>
 
                       <div className="relative">
