@@ -22,10 +22,14 @@ export interface Exercise {
   bodyPart?: string;
   sets: { reps: number; weight: number; completed?: boolean }[];
 }
+
 export interface Workout {
   id: string;
   user_id: string;
   date: string;
+  startTime?: string;
+  endTime?: string;
+  duration?: number;
   exercises: Exercise[];
 }
 
@@ -43,7 +47,6 @@ function App() {
   const [allLibraryExercises, setAllLibraryExercises] = useState<LibraryExercise[]>([]);
   const [favoriteExercises, setFavoriteExercises] = useState<string[]>([]);
 
-  // Yeni: Kullanıcı profil bilgileri için state
   const [userProfile, setUserProfile] = useState<{ fullName: string | null, avatarUrl: string | null }>({ fullName: null, avatarUrl: null });
 
   useEffect(() => {
@@ -67,7 +70,6 @@ function App() {
     if (!session) return;
     setLoading(true);
     try {
-      // Profil verisi sorgusuna full_name ve avatar_url eklendi
       const [workoutsRes, routinesRes, exercisesRes, profileRes] = await Promise.all([
         supabase.from('workouts').select('*').eq('user_id', session.user.id).order('date', { ascending: false }),
         supabase.from('routines').select('*').eq('user_id', session.user.id).order('name'),
@@ -79,7 +81,13 @@ function App() {
       if (routinesRes.error) throw routinesRes.error;
       if (profileRes.error && profileRes.status !== 406) throw profileRes.error;
 
-      setWorkouts(workoutsRes.data as Workout[] || []);
+      const formattedWorkouts = (workoutsRes.data || []).map((w: any) => ({
+        ...w,
+        startTime: w.start_time || w.startTime,
+        endTime: w.end_time || w.endTime
+      }));
+
+      setWorkouts(formattedWorkouts as Workout[]);
       setRoutines(routinesRes.data as Routine[] || []);
       setAllLibraryExercises(exercisesRes || []);
 
@@ -90,6 +98,22 @@ function App() {
           avatarUrl: profileRes.data.avatar_url
         });
       }
+
+      // --- ÖNEMLİ GÜNCELLEME: Aktif Antrenman Kontrolü ---
+      // Eğer yerel depolamada kayıtlı bir başlangıç zamanı varsa, antrenman devam ediyor demektir.
+      const savedStartTime = localStorage.getItem('currentWorkoutStartTime');
+      if (savedStartTime) {
+        const todayStr = new Date().toISOString().split('T')[0];
+        // Bugün için veritabanından gelen bir antrenman kaydı var mı kontrol et
+        const workoutForToday = formattedWorkouts.find((w: any) => w.date === todayStr);
+
+        setSelectedDate(todayStr);
+        // Varsa mevcut antrenmanı, yoksa null (yeni antrenman) olarak ayarla
+        setEditingWorkout((workoutForToday as Workout) || null);
+        // Doğrudan antrenman sayfasına yönlendir
+        setCurrentView('add');
+      }
+      // ----------------------------------------------------
 
     } catch (error) { console.error("Veri çekme hatası:", error); }
     finally { setLoading(false); }
@@ -116,19 +140,100 @@ function App() {
     }
   };
 
-  const handleSaveWorkout = async (workoutData: Omit<Workout, 'id' | 'user_id' | 'created_at'>) => {
+  const handleSaveWorkout = async (workoutData: Omit<Workout, 'id' | 'user_id' | 'created_at'>, shouldFinish: boolean = true) => {
     if (!session) return;
-    const workoutToUpdate = editingWorkout;
-    const workoutPayload = { ...workoutData, user_id: session.user.id };
-    if (workoutToUpdate && workoutToUpdate.id !== 'new') {
-      await supabase.from('workouts').update({ exercises: workoutPayload.exercises, date: workoutPayload.date }).eq('id', workoutToUpdate.id);
-    } else {
-      await supabase.from('workouts').insert([workoutPayload]);
+
+    try {
+      const workoutToUpdate = editingWorkout;
+
+      const dbPayload = {
+        user_id: session.user.id,
+        date: workoutData.date,
+        exercises: workoutData.exercises,
+        start_time: workoutData.startTime,
+        end_time: workoutData.endTime,
+        duration: workoutData.duration
+      };
+
+      let savedWorkoutId = workoutToUpdate?.id;
+
+      if (workoutToUpdate && workoutToUpdate.id !== 'new') {
+        const { error } = await supabase
+          .from('workouts')
+          .update(dbPayload)
+          .eq('id', workoutToUpdate.id);
+        if (error) throw error;
+      } else {
+        const { data, error } = await supabase
+          .from('workouts')
+          .insert([dbPayload])
+          .select()
+          .single();
+
+        if (error) throw error;
+        if (data) savedWorkoutId = data.id;
+      }
+
+      await fetchAllData();
+
+      if (shouldFinish) {
+        setEditingWorkout(null);
+        setCurrentView('calendar');
+      } else {
+        if (savedWorkoutId) {
+          setEditingWorkout({
+            id: savedWorkoutId,
+            user_id: session.user.id,
+            date: workoutData.date,
+            exercises: workoutData.exercises,
+            startTime: workoutData.startTime,
+            endTime: workoutData.endTime,
+            duration: workoutData.duration
+          });
+        }
+      }
+
+    } catch (error: any) {
+      console.error("Antrenman kaydedilirken hata oluştu:", error);
+      alert(`Kayıt sırasında bir hata oluştu: ${error.message}`);
+      throw error;
     }
-    setEditingWorkout(null);
-    await fetchAllData();
-    setCurrentView('calendar');
   };
+
+  const handleFinishWorkoutFromCalendar = async (workout: Workout) => {
+    if (!confirm('Antrenmanı bitirmek istediğinize emin misiniz?')) return;
+
+    const now = new Date();
+    let duration = workout.duration || 0;
+
+    const savedStartTime = localStorage.getItem('currentWorkoutStartTime');
+    if (savedStartTime) {
+      const start = new Date(savedStartTime).getTime();
+      duration = Math.floor((now.getTime() - start) / 1000);
+    } else if (workout.startTime) {
+      const start = new Date(workout.startTime).getTime();
+      duration = Math.floor((now.getTime() - start) / 1000);
+    }
+
+    try {
+      const { error } = await supabase
+        .from('workouts')
+        .update({
+          end_time: now.toISOString(),
+          duration: duration
+        })
+        .eq('id', workout.id);
+
+      if (error) throw error;
+
+      localStorage.removeItem('currentWorkoutStartTime');
+
+      await fetchAllData();
+    } catch (error: any) {
+      console.error("Bitirme hatası:", error);
+      alert('Hata: ' + error.message);
+    }
+  }
 
   const handleSaveRoutine = async (id: string | null, name: string, exercises: { id: string; name: string }[]) => {
     if (!session) return;
@@ -258,8 +363,9 @@ function App() {
           onDateSelect={(date) => { setSelectedDate(date); const workoutForDate = workouts.find(w => w.date === date); if (workoutForDate) { setEditingWorkout(workoutForDate); setCurrentView('details'); } else { setEditingWorkout(null); setCurrentView('add'); } }}
           onStartWorkout={handleStartOrContinueWorkout}
           onStartRoutine={handleStartWorkoutFromRoutine}
-          userProfile={userProfile} // Profil bilgisi aktarılıyor
-          onProfileClick={() => setCurrentView('profile')} // Profil sayfasına geçiş
+          userProfile={userProfile}
+          onProfileClick={() => setCurrentView('profile')}
+          onFinishWorkout={handleFinishWorkoutFromCalendar}
         />
       );
       case 'add': return <AddWorkout date={selectedDate} existingWorkout={editingWorkout} routines={routines} workouts={workouts} onSave={handleSaveWorkout} onCancel={() => { setEditingWorkout(null); setCurrentView('calendar'); }} allLibraryExercises={allLibraryExercises} favoriteExercises={favoriteExercises} />;
@@ -279,14 +385,12 @@ function App() {
     }
   };
 
-  // GÜNCELLEME: Profil ikonu kaldırıldı
   const renderBottomNav = () => {
     const navItems = [
       { view: 'calendar', icon: CalendarRange, label: 'Takvim' },
       { view: 'routines', icon: Radar, label: 'Rutinler' },
       { view: 'library', icon: LibraryBig, label: 'Kütüphane' },
       { view: 'progress', icon: LineChart, label: 'İlerleme' },
-      // Profil buraya eklenmedi
     ];
     return (
       <nav className="fixed bottom-0 left-0 right-0 bg-system-background-secondary/90 backdrop-blur-xl border-t border-system-separator z-50">

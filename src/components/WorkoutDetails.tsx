@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { format, parseISO } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { Edit, Trash2, TrendingUp, Calendar as CalendarIcon, ArrowLeft } from 'lucide-react';
+import { Edit, Trash2, TrendingUp, Calendar as CalendarIcon, ArrowLeft, Clock } from 'lucide-react';
 import { Workout, Exercise } from '../App';
 
 interface WorkoutDetailsProps {
@@ -11,7 +11,6 @@ interface WorkoutDetailsProps {
   workouts: Workout[];
   onEdit: () => void;
   onDelete: (id: string) => void;
-  // Geri dönme işlevi için onCancel prop'u ekleyelim
   onCancel: () => void;
 }
 
@@ -27,6 +26,14 @@ const WorkoutDetails: React.FC<WorkoutDetailsProps> = ({
 
   const formatDate = (dateStr: string) => {
     return format(parseISO(dateStr), 'dd MMMM yyyy', { locale: tr });
+  };
+
+  const formatDuration = (seconds?: number) => {
+    if (!seconds) return null;
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    if (h > 0) return `${h}sa ${m}dk`;
+    return `${m}dk`;
   };
 
   const getPreviousWorkout = (exerciseName: string) => {
@@ -60,13 +67,12 @@ const WorkoutDetails: React.FC<WorkoutDetailsProps> = ({
     return { totalSets, totalVolume, exerciseCount };
   };
 
-  // Eğer o gün antrenman yoksa gösterilecek ekran
   if (!workout) {
     return (
       <div className="p-4">
         <div className="flex justify-between items-center pt-4">
-            <button onClick={onCancel} className="text-system-blue text-lg">Geri</button>
-            <div className="w-10"></div> {/* Başlığı ortalamak için */}
+          <button onClick={onCancel} className="text-system-blue text-lg">Geri</button>
+          <div className="w-10"></div>
         </div>
         <div className="text-center py-16 px-4 bg-system-background-secondary rounded-xl mt-6">
           <CalendarIcon size={40} className="mx-auto text-system-label-tertiary mb-4" />
@@ -88,30 +94,29 @@ const WorkoutDetails: React.FC<WorkoutDetailsProps> = ({
   const stats = getWorkoutStats(workout);
   const exercisesToShow = workout.exercises.filter(ex => ex.sets && ex.sets.length > 0);
 
-  // Antrenman var ama içi boşsa gösterilecek ekran
   if (exercisesToShow.length === 0) {
     return (
-        <div className="p-4">
-            <div className="flex justify-between items-center pt-4">
-                <button onClick={onCancel} className="text-system-blue text-lg">Geri</button>
-                <div className="w-10"></div>
-            </div>
-            <div className="text-center py-16 px-4 bg-system-background-secondary rounded-xl mt-6">
-                <CalendarIcon size={40} className="mx-auto text-system-label-tertiary mb-4" />
-                <h3 className="text-lg font-semibold text-system-label mb-1">
-                    Henüz Veri Girilmedi
-                </h3>
-                <p className="text-system-label-secondary text-sm mb-6">
-                    Bu antrenmanda henüz set bilgisi girilmiş bir hareket yok.
-                </p>
-                <button
-                    onClick={onEdit}
-                    className="bg-system-blue text-white py-2 px-5 rounded-lg font-semibold flex items-center gap-2 mx-auto"
-                >
-                    <Edit size={18} /> Antrenmana Devam Et
-                </button>
-            </div>
+      <div className="p-4">
+        <div className="flex justify-between items-center pt-4">
+          <button onClick={onCancel} className="text-system-blue text-lg">Geri</button>
+          <div className="w-10"></div>
         </div>
+        <div className="text-center py-16 px-4 bg-system-background-secondary rounded-xl mt-6">
+          <CalendarIcon size={40} className="mx-auto text-system-label-tertiary mb-4" />
+          <h3 className="text-lg font-semibold text-system-label mb-1">
+            Henüz Veri Girilmedi
+          </h3>
+          <p className="text-system-label-secondary text-sm mb-6">
+            Bu antrenmanda henüz set bilgisi girilmiş bir hareket yok.
+          </p>
+          <button
+            onClick={onEdit}
+            className="bg-system-blue text-white py-2 px-5 rounded-lg font-semibold flex items-center gap-2 mx-auto"
+          >
+            <Edit size={18} /> Antrenmana Devam Et
+          </button>
+        </div>
+      </div>
     )
   }
 
@@ -120,14 +125,23 @@ const WorkoutDetails: React.FC<WorkoutDetailsProps> = ({
       {/* Sayfa Başlığı ve Butonlar */}
       <div className="flex justify-between items-center pt-4">
         <button onClick={onCancel} className="text-system-blue text-lg p-2 -ml-2">
-            <ArrowLeft size={24} />
+          <ArrowLeft size={24} />
         </button>
-        <h1 className="text-xl font-bold text-system-label capitalize">
-          {formatDate(date)}
-        </h1>
+        <div className="flex flex-col items-center">
+          <h1 className="text-xl font-bold text-system-label capitalize">
+            {formatDate(date)}
+          </h1>
+          {/* SÜRE GÖSTERİMİ EKLENDİ */}
+          {workout.duration && (
+            <div className="flex items-center gap-1 text-xs text-system-label-secondary mt-1">
+              <Clock size={12} />
+              <span>{formatDuration(workout.duration)}</span>
+            </div>
+          )}
+        </div>
         <div className="flex gap-2">
-            <button onClick={onEdit} className="p-2 bg-system-fill rounded-full text-system-blue"> <Edit size={20} /> </button>
-            <button onClick={() => { if (confirm('Bu antrenmanı silmek istediğinizden emin misiniz?')) { onDelete(workout.id); } }} className="p-2 bg-system-fill rounded-full text-system-red"> <Trash2 size={20} /> </button>
+          <button onClick={onEdit} className="p-2 bg-system-fill rounded-full text-system-blue"> <Edit size={20} /> </button>
+          <button onClick={() => { if (confirm('Bu antrenmanı silmek istediğinizden emin misiniz?')) { onDelete(workout.id); } }} className="p-2 bg-system-fill rounded-full text-system-red"> <Trash2 size={20} /> </button>
         </div>
       </div>
 
@@ -154,13 +168,12 @@ const WorkoutDetails: React.FC<WorkoutDetailsProps> = ({
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-bold text-system-label">Hareketler</h2>
         <button
-            onClick={() => setShowComparison(!showComparison)}
-            className={`p-2 rounded-full transition-colors ${
-              showComparison ? 'bg-system-orange text-white' : 'bg-system-fill text-system-orange'
+          onClick={() => setShowComparison(!showComparison)}
+          className={`p-2 rounded-full transition-colors ${showComparison ? 'bg-system-orange text-white' : 'bg-system-fill text-system-orange'
             }`}
-          >
-            <TrendingUp size={20} />
-          </button>
+        >
+          <TrendingUp size={20} />
+        </button>
       </div>
 
       {/* Hareket Listesi */}
@@ -182,7 +195,7 @@ const WorkoutDetails: React.FC<WorkoutDetailsProps> = ({
                   </div>
                 )}
               </div>
-              
+
               {/* Set Tablosu */}
               <div className="px-4 pb-4">
                 <div className="grid grid-cols-3 gap-2 text-sm text-center font-medium text-system-label-secondary mb-2">
@@ -208,10 +221,9 @@ const WorkoutDetails: React.FC<WorkoutDetailsProps> = ({
                       <div className="flex items-center gap-2">
                         <span className="font-medium text-system-label">{currentMax} kg</span>
                         {previousMax > 0 && (
-                          <span className={`text-xs font-semibold ${
-                            currentMax > previousMax ? 'text-system-green' : 
-                            currentMax < previousMax ? 'text-system-red' : 'text-system-label-secondary'
-                          }`}>
+                          <span className={`text-xs font-semibold ${currentMax > previousMax ? 'text-system-green' :
+                              currentMax < previousMax ? 'text-system-red' : 'text-system-label-secondary'
+                            }`}>
                             ({currentMax > previousMax ? '+' : ''}{(currentMax - previousMax).toFixed(1)})
                           </span>
                         )}
@@ -222,10 +234,9 @@ const WorkoutDetails: React.FC<WorkoutDetailsProps> = ({
                       <div className="flex items-center gap-2">
                         <span className="font-medium text-system-label">{currentVolume.toFixed(0)} kg</span>
                         {previousVolume > 0 && (
-                          <span className={`text-xs font-semibold ${
-                            currentVolume > previousVolume ? 'text-system-green' : 
-                            currentVolume < previousVolume ? 'text-system-red' : 'text-system-label-secondary'
-                          }`}>
+                          <span className={`text-xs font-semibold ${currentVolume > previousVolume ? 'text-system-green' :
+                              currentVolume < previousVolume ? 'text-system-red' : 'text-system-label-secondary'
+                            }`}>
                             ({currentVolume > previousVolume ? '+' : ''}{(currentVolume - previousVolume).toFixed(0)})
                           </span>
                         )}

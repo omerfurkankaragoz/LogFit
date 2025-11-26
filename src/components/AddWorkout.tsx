@@ -1,8 +1,8 @@
 // src/components/AddWorkout.tsx
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { Plus, Trash2, Search, X, Star, Radar, BadgePlus, CheckCircle2, Check } from 'lucide-react';
-import { Workout, Exercise } from '../types';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { Plus, Trash2, Search, X, Star, Radar, BadgePlus, CheckCircle2, Clock, GripVertical, Save } from 'lucide-react';
+import { Workout, Exercise } from '../App';
 import { Routine } from './RoutinesList';
 import { Exercise as LibraryExercise } from '../services/exerciseApi';
 
@@ -14,19 +14,37 @@ interface AddWorkoutProps {
   existingWorkout: Workout | null;
   routines: Routine[];
   workouts: Workout[];
-  onSave: (workout: Omit<Workout, 'id' | 'user_id' | 'created_at'>) => void;
+  onSave: (workout: Omit<Workout, 'id' | 'user_id' | 'created_at'>, shouldFinish: boolean) => Promise<void>;
   onCancel: () => void;
   allLibraryExercises: LibraryExercise[];
   favoriteExercises: string[];
 }
 
 const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines, workouts, onSave, onCancel, allLibraryExercises, favoriteExercises }) => {
-  const [workoutExercises, setWorkoutExercises] = useState<Exercise[]>([]);
+  const [workoutExercises, setWorkoutExercises] = useState<Exercise[]>(() => {
+    return existingWorkout ? existingWorkout.exercises : [];
+  });
+
   const [isRoutinePickerOpen, setRoutinePickerOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // --- SAYAÇ STATE'LERİ ---
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [startTime, setStartTime] = useState<string | null>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const isInitialLoad = useRef(true);
+
   const [showLargeImage, setShowLargeImage] = useState(false);
   const [currentLargeImageUrl, setCurrentLargeImageUrl] = useState<string | null>(null);
+
+  // State güncellemelerini takip etmek için ref
+  const loadedWorkoutId = useRef<string | null>(existingWorkout?.id || null);
+
+  // BUGÜN KONTROLÜ
+  const isToday = useMemo(() => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    return date === todayStr;
+  }, [date]);
 
   const workoutExerciseNames = useMemo(() =>
     new Set(workoutExercises.map(ex => ex.name.toLowerCase())),
@@ -59,23 +77,74 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
   }, [searchQuery, allLibraryExercises, workoutExerciseNames]);
 
 
+  // --- VERİ YÜKLEME EFFECT'İ ---
   useEffect(() => {
-    if (existingWorkout) {
-      setWorkoutExercises(existingWorkout.exercises);
-    } else {
-      setWorkoutExercises([]);
-    }
-  }, [existingWorkout]);
+    const currentId = existingWorkout?.id || 'new';
 
-  const getPreviousExerciseData = (exerciseName: string): Exercise | null => {
-    if (!exerciseName) return null;
-    const pastWorkouts = workouts.filter(w => new Date(w.date) < new Date(date));
-    const sortedWorkouts = pastWorkouts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    for (const prevWorkout of sortedWorkouts) {
-      const exercise = prevWorkout.exercises.find(ex => ex.name.toLowerCase() === exerciseName.toLowerCase());
-      if (exercise) return exercise;
+    if (loadedWorkoutId.current !== currentId) {
+      setWorkoutExercises(existingWorkout ? existingWorkout.exercises : []);
+      loadedWorkoutId.current = currentId;
     }
-    return null;
+  }, [existingWorkout?.id]);
+
+
+  // --- SAYAÇ EFFECT'İ ---
+  useEffect(() => {
+    if (!isToday) {
+      if (existingWorkout && existingWorkout.duration) {
+        setElapsedSeconds(existingWorkout.duration);
+      } else {
+        setElapsedSeconds(0);
+      }
+      return;
+    }
+
+    const savedStartTime = localStorage.getItem('currentWorkoutStartTime');
+    let currentStartTimestamp = 0;
+
+    if (savedStartTime) {
+      setStartTime(savedStartTime);
+      currentStartTimestamp = new Date(savedStartTime).getTime();
+    }
+    else if (existingWorkout && existingWorkout.id !== 'new' && existingWorkout.duration) {
+      setElapsedSeconds(existingWorkout.duration);
+      return;
+    }
+    else {
+      const nowStr = new Date().toISOString();
+      setStartTime(nowStr);
+      localStorage.setItem('currentWorkoutStartTime', nowStr);
+      currentStartTimestamp = new Date(nowStr).getTime();
+      setElapsedSeconds(0);
+    }
+
+    const now = new Date().getTime();
+    const diff = Math.max(0, Math.floor((now - currentStartTimestamp) / 1000));
+    setElapsedSeconds(diff);
+
+    timerRef.current = setInterval(() => {
+      const loopNow = new Date().getTime();
+      const loopDiff = Math.max(0, Math.floor((loopNow - currentStartTimestamp) / 1000));
+      setElapsedSeconds(loopDiff);
+
+      if (loopDiff > 7200) {
+        if (timerRef.current) clearInterval(timerRef.current);
+        handleAutoFinish(loopDiff, new Date(currentStartTimestamp).toISOString());
+      }
+    }, 1000);
+
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [existingWorkout?.id, isToday]);
+
+
+  const formatTime = (totalSeconds: number) => {
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    if (hours > 0) return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
   const handleAddExerciseToWorkout = (exercise: LibraryExercise) => {
@@ -136,14 +205,58 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
     setWorkoutExercises(prev => prev.map(ex => (ex.id === exerciseId ? { ...ex, sets: ex.sets.map((set, i) => (i === setIndex ? { ...set, [field]: value } : set)) } : ex)));
   };
 
-  const handleSave = () => {
-    const exercisesToSave = workoutExercises
+  const prepareWorkoutData = () => {
+    return workoutExercises
       .filter(ex => ex.name.trim())
       .map(ex => ({
         ...ex,
         sets: ex.sets.filter(set => set.reps > 0 || set.weight > 0)
       }));
-    onSave({ date, exercises: exercisesToSave });
+  };
+
+  const handleAutoFinish = async (finalDuration: number, finalStartTimeStr: string) => {
+    const exercisesToSave = prepareWorkoutData();
+    const endTime = new Date().toISOString();
+    try {
+      await onSave({
+        date,
+        exercises: exercisesToSave,
+        startTime: finalStartTimeStr,
+        endTime: endTime,
+        duration: finalDuration
+      }, true);
+      localStorage.removeItem('currentWorkoutStartTime');
+      alert('Antrenman süresi 2 saati aştığı için otomatik olarak sonlandırıldı.');
+    } catch (error) {
+      console.error("Auto finish failed", error);
+    }
+  };
+
+  const handleSaveAndExit = async () => {
+    const exercisesToSave = prepareWorkoutData();
+    try {
+      await onSave({
+        date,
+        exercises: exercisesToSave,
+        startTime: startTime || undefined,
+        endTime: undefined,
+        duration: elapsedSeconds
+      }, false);
+
+      onCancel();
+    } catch (error) {
+      console.error("Save failed", error);
+    }
+  };
+
+  // --- GÜNCELLENEN İPTAL MANTIĞI ---
+  const handleCancel = () => {
+    // Eğer hareket eklenmemişse (veri girişi yoksa), sayacı sıfırla.
+    if (workoutExercises.length === 0) {
+      localStorage.removeItem('currentWorkoutStartTime');
+    }
+    // Eğer hareket varsa, sayaç localStorage'da kalır ve devam eder.
+    onCancel();
   };
 
   const getImageUrl = (gifPath: string | undefined) => {
@@ -171,7 +284,7 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
   );
 
   const AddExerciseSection = (
-    <div className="bg-system-background-secondary rounded-2xl overflow-hidden shadow-sm border border-system-separator/10">
+    <div className="bg-system-background-secondary rounded-2xl overflow-hidden shadow-sm border border-system-separator/10 mb-20">
       <div className="p-4 pb-2">
         <h3 className="text-lg font-bold text-system-label mb-4 flex items-center gap-2"> <Plus className="w-5 h-5 text-system-blue" /> Hareket Ekle</h3>
         <div className="space-y-4">
@@ -241,12 +354,10 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
       {workoutExercises.map((exercise) => {
         const libraryExercise = allLibraryExercises.find(libEx => libEx.name.toLowerCase() === exercise.name.toLowerCase());
         const imageUrl = getImageUrl(libraryExercise?.gifUrl);
-        const previousExercise = getPreviousExerciseData(exercise.name);
         const isEditable = exercise.id.startsWith('manual-');
 
         return (
           <div key={exercise.id} className="bg-system-background-secondary rounded-2xl overflow-hidden shadow-sm border border-system-separator/10">
-            {/* Exercise Header */}
             <div className="p-4 flex items-start gap-4 border-b border-system-separator/20 bg-system-background-tertiary/30">
               <button onClick={() => handleImageClick(imageUrl)} className="flex-shrink-0 active:scale-95 transition-transform">
                 <img src={imageUrl} alt={exercise.name} className="w-14 h-14 rounded-xl object-cover shadow-sm" />
@@ -267,35 +378,22 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
               </button>
             </div>
 
-            {/* Sets Header */}
-            <div className="grid grid-cols-[0.8fr,1.2fr,1.2fr,auto,auto] gap-3 px-4 py-2 text-xs font-semibold text-system-label-secondary uppercase tracking-wide text-center items-center">
+            <div className="grid grid-cols-[0.8fr,1.2fr,1.2fr,auto] gap-3 px-4 py-2 text-xs font-semibold text-system-label-secondary uppercase tracking-wide text-center items-center">
               <span>Önceki</span>
               <span>KG</span>
               <span>Tekrar</span>
-              <span className="w-8"><Check size={14} className="mx-auto" /></span>
               <span className="w-8"></span>
             </div>
 
-            {/* Sets List */}
             <div className="px-4 pb-4 space-y-3">
               {exercise.sets.map((set, setIndex) => {
-                const previousSet = previousExercise?.sets[setIndex];
-                const isCompleted = set.completed;
-
                 return (
                   <React.Fragment key={setIndex}>
-                    <div className={`grid grid-cols-[0.8fr,1.2fr,1.2fr,auto,auto] gap-3 items-center transition-opacity duration-200 ${isCompleted ? 'opacity-50' : 'opacity-100'}`}>
-                      {/* Previous Data */}
+                    <div className="grid grid-cols-[0.8fr,1.2fr,1.2fr,auto] gap-3 items-center">
                       <div className="h-12 bg-system-fill-secondary rounded-xl flex flex-col items-center justify-center text-xs text-system-label-secondary font-medium">
-                        {previousSet ? (
-                          <>
-                            <span>{previousSet.weight}kg</span>
-                            <span className="text-[10px] opacity-70">{previousSet.reps} tekrar</span>
-                          </>
-                        ) : '-'}
+                        -
                       </div>
 
-                      {/* Current Weight Input */}
                       <div className="relative">
                         <input
                           type="number"
@@ -307,7 +405,6 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
                         />
                       </div>
 
-                      {/* Current Reps Input */}
                       <div className="relative">
                         <input
                           type="number"
@@ -319,15 +416,6 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
                         />
                       </div>
 
-                      {/* Check Button */}
-                      <button
-                        onClick={() => updateSet(exercise.id, setIndex, 'completed', !isCompleted)}
-                        className={`h-12 w-10 flex items-center justify-center rounded-xl transition-all active:scale-90 ${isCompleted ? 'bg-system-green text-white' : 'bg-system-fill-tertiary text-system-label-tertiary'}`}
-                      >
-                        <Check size={20} strokeWidth={3} />
-                      </button>
-
-                      {/* Delete Button */}
                       <button
                         onClick={() => removeSet(exercise.id, setIndex)}
                         className="h-12 w-10 flex items-center justify-center text-system-label-tertiary hover:text-system-red active:scale-90 transition-all bg-system-fill-tertiary rounded-xl"
@@ -351,25 +439,33 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
 
   return (
     <div className="bg-system-background min-h-full relative">
-      {/* Header - GÜNCELLENDİ: bg-system-background/80 ve backdrop-blur-md */}
+      {/* Header */}
       <div className="sticky top-[env(safe-area-inset-top)] z-10 bg-system-background/80 backdrop-blur-md border-b border-system-separator/20 transition-colors duration-200">
-        <div className="flex justify-between items-center p-4">
-          <button onClick={onCancel} className="text-system-blue text-lg font-medium hover:opacity-80 transition-opacity px-2 -ml-2">İptal</button>
-          <div className="flex items-center gap-2">
+        <div className="flex justify-between items-center p-4 relative">
+          <button onClick={handleCancel} className="text-system-blue text-lg font-medium hover:opacity-80 transition-opacity px-2 -ml-2">İptal</button>
+
+          <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
             <h1 className="text-lg font-bold text-system-label">Antrenman</h1>
+            {/* Sadece bugünse veya sayaç aktifse (0'dan büyükse) sayacı göster */}
+            {(isToday || elapsedSeconds > 0) && (
+              <div className={`flex items-center gap-1 font-mono text-sm font-medium px-2 py-0.5 rounded-md mt-0.5 ${isToday ? 'text-system-green bg-system-green/10' : 'text-system-label-secondary bg-system-fill'}`}>
+                <Clock size={12} />
+                <span>{formatTime(elapsedSeconds)}</span>
+              </div>
+            )}
           </div>
+
           <button
-            onClick={handleSave}
-            className="bg-system-blue text-white text-sm font-bold px-4 py-2 rounded-full hover:bg-system-blue/90 active:scale-95 transition-all shadow-lg shadow-system-blue/20 flex items-center gap-1"
+            onClick={handleSaveAndExit}
+            className="text-system-blue text-lg font-bold hover:opacity-80 transition-opacity px-2 -mr-2"
           >
-            <CheckCircle2 size={16} />
-            Bitir
+            Kaydet
           </button>
         </div>
       </div>
 
       {/* Content */}
-      <div className="p-4 space-y-8 pb-32">
+      <div className="p-4 space-y-8 pb-10">
         {workoutExercises.length > 0 ? (
           <>
             {WorkoutListSection}

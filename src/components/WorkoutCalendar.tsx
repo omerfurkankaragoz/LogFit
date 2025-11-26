@@ -1,9 +1,9 @@
 // src/components/WorkoutCalendar.tsx
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, parseISO, startOfWeek, endOfWeek } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, Dumbbell, PlayCircle, Zap, UserCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Dumbbell, PlayCircle, Zap, UserCircle, CheckCircle2, Eye, Activity } from 'lucide-react';
 import type { Workout } from '../App';
 import { Routine } from './RoutinesList';
 
@@ -13,12 +13,14 @@ interface WorkoutCalendarProps {
   onDateSelect: (date: string) => void;
   onStartWorkout: () => void;
   onStartRoutine: (routine: Routine) => void;
-  userProfile: { fullName: string | null, avatarUrl: string | null }; // Yeni prop
-  onProfileClick: () => void; // Yeni prop
+  userProfile: { fullName: string | null, avatarUrl: string | null };
+  onProfileClick: () => void;
+  onFinishWorkout: (workout: Workout) => void;
 }
 
-const WorkoutCalendar: React.FC<WorkoutCalendarProps> = ({ workouts, routines, onDateSelect, onStartWorkout, onStartRoutine, userProfile, onProfileClick }) => {
+const WorkoutCalendar: React.FC<WorkoutCalendarProps> = ({ workouts, routines, onDateSelect, onStartWorkout, onStartRoutine, userProfile, onProfileClick, onFinishWorkout }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [hasActiveLocalSession, setHasActiveLocalSession] = useState(false);
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -29,6 +31,19 @@ const WorkoutCalendar: React.FC<WorkoutCalendarProps> = ({ workouts, routines, o
 
   const todayStr = new Date().toISOString().split('T')[0];
   const workoutForToday = workouts.find(w => w.date === todayStr);
+
+  // Son 5 antrenmanı al
+  const last5Workouts = workouts.slice(0, 5);
+
+  // Antrenman bitmiş mi kontrolü
+  const isWorkoutFinished = workoutForToday && (workoutForToday.duration !== undefined && workoutForToday.duration !== null && workoutForToday.duration > 0);
+
+  useEffect(() => {
+    const savedStartTime = localStorage.getItem('currentWorkoutStartTime');
+    if (savedStartTime) {
+      setHasActiveLocalSession(true);
+    }
+  }, []);
 
   const handlePrevMonth = () => {
     setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1));
@@ -43,9 +58,25 @@ const WorkoutCalendar: React.FC<WorkoutCalendarProps> = ({ workouts, routines, o
     onDateSelect(dateStr);
   };
 
+  const handleMainButtonClick = () => {
+    if (isWorkoutFinished) {
+      onDateSelect(todayStr);
+    } else {
+      onStartWorkout();
+    }
+  };
+
+  const formatDuration = (seconds?: number) => {
+    if (!seconds) return '';
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    if (h > 0) return `${h}sa ${m}dk`;
+    return `${m}dk`;
+  };
+
   return (
     <div>
-      {/* GÜNCELLENEN BAŞLIK ALANI - Sticky & Transparent Profile Header */}
+      {/* Header */}
       <div className="sticky top-[env(safe-area-inset-top)] z-10 bg-system-background/80 backdrop-blur-md pt-4 pb-2 px-4 flex justify-between items-center border-b border-system-separator/20 transition-colors duration-200">
         <div>
           <p className="text-xs text-system-label-secondary font-medium mb-0.5">Merhaba,</p>
@@ -122,22 +153,48 @@ const WorkoutCalendar: React.FC<WorkoutCalendarProps> = ({ workouts, routines, o
           </div>
         </div>
 
-        {/* Antrenmana Başla Butonu */}
-        <div className="px-2">
+        {/* Ana Aksiyon Butonu */}
+        <div className="px-2 space-y-3">
           <button
-            onClick={onStartWorkout}
-            className={`w-full flex items-center justify-center gap-3 py-4 px-6 rounded-2xl font-bold text-lg shadow-xl transition-all active:scale-95 ${workoutForToday
-              ? 'bg-gradient-to-r from-system-orange to-orange-500 text-white shadow-orange-500/20'
-              : 'bg-gradient-to-r from-system-blue to-blue-600 text-white shadow-system-blue/30'
+            onClick={handleMainButtonClick}
+            className={`w-full flex items-center justify-center gap-3 py-4 px-6 rounded-2xl font-bold text-lg shadow-xl transition-all active:scale-95
+              ${isWorkoutFinished
+                ? 'bg-gradient-to-r from-system-green to-green-600 text-white shadow-system-green/30'
+                : (workoutForToday || hasActiveLocalSession)
+                  ? 'bg-gradient-to-r from-system-orange to-orange-500 text-white shadow-orange-500/20'
+                  : 'bg-gradient-to-r from-system-blue to-blue-600 text-white shadow-system-blue/30'
               }`}
           >
-            {workoutForToday ? <Dumbbell size={24} /> : <PlayCircle size={24} />}
-            {workoutForToday ? 'Antrenmana Devam Et' : 'Bugünkü Antrenmanı Başlat'}
+            {isWorkoutFinished ? (
+              <Eye size={24} />
+            ) : (workoutForToday || hasActiveLocalSession) ? (
+              <Dumbbell size={24} />
+            ) : (
+              <PlayCircle size={24} />
+            )}
+
+            {isWorkoutFinished
+              ? 'Antrenmanı Görüntüle'
+              : (workoutForToday || hasActiveLocalSession)
+                ? 'Antrenmana Devam Et'
+                : 'Bugünkü Antrenmanı Başlat'
+            }
           </button>
+
+          {/* Antrenmanı Bitir Butonu */}
+          {workoutForToday && !isWorkoutFinished && (
+            <button
+              onClick={() => onFinishWorkout(workoutForToday)}
+              className="w-full flex items-center justify-center gap-3 py-4 px-6 rounded-2xl font-bold text-lg shadow-sm transition-all active:scale-95 bg-system-background-tertiary text-system-red border border-system-red/20 hover:bg-system-red/10"
+            >
+              <CheckCircle2 size={24} />
+              Antrenmanı Bitir
+            </button>
+          )}
         </div>
 
         {/* Hızlı Başlangıç Bölümü */}
-        {routines.length > 0 && !workoutForToday && (
+        {routines.length > 0 && !workoutForToday && !hasActiveLocalSession && (
           <div>
             <h2 className="text-sm font-bold text-system-label-secondary mb-3 uppercase tracking-wider px-1 flex items-center gap-1">
               <Zap size={14} className="text-system-yellow" /> Hızlı Başlat
@@ -187,6 +244,50 @@ const WorkoutCalendar: React.FC<WorkoutCalendarProps> = ({ workouts, routines, o
             </div>
           </div>
         </div>
+
+        {/* Son 5 Antrenman Listesi (GÜNCELLENDİ: Durum metinleri kaldırıldı) */}
+        {last5Workouts.length > 0 && (
+          <div className="space-y-3 pb-4">
+            <h2 className="font-bold text-system-label text-lg px-1">Son Antrenmanlar</h2>
+            <div className="space-y-3">
+              {last5Workouts.map(workout => (
+                <button
+                  key={workout.id}
+                  onClick={() => onDateSelect(workout.date)}
+                  className="w-full p-4 bg-system-background-secondary rounded-2xl border border-system-separator/10 flex items-center justify-between active:scale-[0.98] transition-transform hover:bg-system-background-tertiary"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-system-background-tertiary flex items-center justify-center text-system-blue">
+                      <Activity size={24} />
+                    </div>
+                    <div className="text-left">
+                      <h3 className="font-bold text-system-label text-base">
+                        Antrenman
+                      </h3>
+                      <p className="text-xs text-system-label-secondary mt-0.5">
+                        {format(parseISO(workout.date), 'd MMMM yyyy', { locale: tr })}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    {/* Sadece süre varsa göster, yoksa boş bırak (metin etiketi yok) */}
+                    {workout.duration && (
+                      <div className="px-2 py-1 bg-system-green/10 rounded-md">
+                        <p className="text-xs font-medium text-system-green">
+                          {formatDuration(workout.duration)}
+                        </p>
+                      </div>
+                    )}
+                    <p className="text-xs text-system-label-tertiary">
+                      {workout.exercises.length} hareket
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );
