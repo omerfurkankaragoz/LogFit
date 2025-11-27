@@ -1,9 +1,9 @@
 // src/components/WorkoutCalendar.tsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, parseISO, startOfWeek, endOfWeek } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, Dumbbell, PlayCircle, Zap, UserCircle, CheckCircle2, Eye, Activity, ArrowLeft } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Dumbbell, PlayCircle, Zap, UserCircle, CheckCircle2, Eye, Activity } from 'lucide-react'; // ArrowLeft kaldırıldı
 import type { Workout } from '../App';
 import { Routine } from './RoutinesList';
 
@@ -44,12 +44,34 @@ const WorkoutCalendar: React.FC<WorkoutCalendarProps> = ({ workouts, routines, o
     }
   }, []);
 
-  // YENİ EKLENDİ: Geçmiş sayfasına geçince en üste kaydır
+  // Geçmiş sayfasına geçince scroll'u en üste al
   useEffect(() => {
     if (showHistory) {
-      window.scrollTo(0, 0);
+      window.scrollTo({ top: 0, behavior: 'instant' });
     }
   }, [showHistory]);
+
+  // Antrenmanları aylara göre grupla
+  const groupedWorkouts = useMemo(() => {
+    const groups: { title: string; data: Workout[] }[] = [];
+
+    // Tarihe göre yeniden eskiye sıralama
+    const sortedWorkouts = [...workouts].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    sortedWorkouts.forEach((workout) => {
+      // Türkçe ay ve yıl formatı (örn: Ocak 2024)
+      const monthTitle = format(parseISO(workout.date), 'MMMM yyyy', { locale: tr });
+
+      const lastGroup = groups[groups.length - 1];
+      if (lastGroup && lastGroup.title === monthTitle) {
+        lastGroup.data.push(workout);
+      } else {
+        groups.push({ title: monthTitle, data: [workout] });
+      }
+    });
+
+    return groups;
+  }, [workouts]);
 
   const handlePrevMonth = () => {
     setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1));
@@ -80,9 +102,7 @@ const WorkoutCalendar: React.FC<WorkoutCalendarProps> = ({ workouts, routines, o
     return `${m}dk`;
   };
 
-  // Ortak Kart Render Fonksiyonu
   const renderWorkoutCard = (workout: Workout) => {
-    // Rutin ismini ID ile bul
     const foundRoutine = routines.find(r => String(r.id) === String(workout.routine_id));
     const routineName = foundRoutine ? foundRoutine.name : 'Serbest Antrenman';
 
@@ -90,7 +110,7 @@ const WorkoutCalendar: React.FC<WorkoutCalendarProps> = ({ workouts, routines, o
       <button
         key={workout.id}
         onClick={() => onDateSelect(workout.date)}
-        className="w-full p-4 bg-system-background-secondary rounded-2xl border border-system-separator/10 flex items-center justify-between active:scale-[0.98] transition-transform hover:bg-system-background-tertiary"
+        className="w-full p-4 bg-system-background-secondary rounded-2xl border border-system-separator/10 flex items-center justify-between active:scale-[0.98] transition-transform hover:bg-system-background-tertiary shadow-sm"
       >
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-full bg-system-background-tertiary flex items-center justify-center text-system-blue">
@@ -101,7 +121,7 @@ const WorkoutCalendar: React.FC<WorkoutCalendarProps> = ({ workouts, routines, o
               {routineName}
             </h3>
             <p className="text-xs text-system-label-secondary mt-0.5">
-              {format(parseISO(workout.date), 'd MMMM yyyy', { locale: tr })}
+              {format(parseISO(workout.date), 'd MMMM yyyy, EEEE', { locale: tr })}
             </p>
           </div>
         </div>
@@ -123,20 +143,44 @@ const WorkoutCalendar: React.FC<WorkoutCalendarProps> = ({ workouts, routines, o
 
   if (showHistory) {
     return (
-      <div className="p-4 space-y-6 animate-in slide-in-from-right duration-200 min-h-full">
-        <div className="flex items-center gap-3 pt-4 pb-2 sticky top-0 bg-system-background z-10">
-          <button onClick={() => setShowHistory(false)} className="text-system-blue p-2 -ml-2 hover:bg-system-background-tertiary rounded-full transition-colors">
-            <ArrowLeft size={28} />
-          </button>
-          <h1 className="text-3xl font-bold text-system-label">Geçmiş</h1>
+      <div className="min-h-full bg-system-background animate-in slide-in-from-right duration-300 relative">
+        {/* iOS STİLİ SABİT BAŞLIK (Sticky Large Header) */}
+        {/* iOS'te geri butonu sadece ikondur ve başlık büyük, sola hizalıdır. */}
+        <div className="sticky top-[env(safe-area-inset-top)] z-40 bg-system-background/95 backdrop-blur-xl border-b border-system-separator/20 px-4 pt-2 pb-4 shadow-sm transition-colors duration-200">
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setShowHistory(false)}
+              className="text-system-blue p-2 -ml-3 hover:opacity-70 transition-opacity rounded-full active:bg-system-fill"
+            >
+              {/* ChevronLeft iOS için daha uygundur */}
+              <ChevronLeft size={34} strokeWidth={2.5} />
+            </button>
+            <h1 className="text-3xl font-bold text-system-label tracking-tight ml-1">Geçmiş</h1>
+          </div>
         </div>
 
-        <div className="space-y-3 pb-24">
+        <div className="pb-24">
           {workouts.length > 0 ? (
-            workouts.map(workout => renderWorkoutCard(workout))
+            groupedWorkouts.map((group) => (
+              <div key={group.title} className="relative">
+                {/* SABİT AY BAŞLIĞI (Sticky Section Header) */}
+                {/* top değeri: safe-area + üstteki header'ın yaklaşık yüksekliği (yaklaşık 72px/4.5rem) */}
+                <div className="sticky top-[calc(4.5rem+env(safe-area-inset-top))] z-30 bg-system-background/95 backdrop-blur-md py-2 px-4 border-b border-system-separator/20 shadow-sm">
+                  <h3 className="text-sm font-bold text-system-label-secondary uppercase tracking-wider">
+                    {group.title}
+                  </h3>
+                </div>
+
+                <div className="p-4 space-y-3">
+                  {group.data.map(workout => renderWorkoutCard(workout))}
+                </div>
+              </div>
+            ))
           ) : (
-            <div className="text-center py-20">
-              <p className="text-system-label-secondary">Henüz kaydedilmiş antrenman yok.</p>
+            <div className="text-center py-20 px-4">
+              <Activity size={48} className="mx-auto text-system-label-tertiary mb-4" />
+              <h3 className="text-xl font-bold text-system-label mb-2">Henüz Kayıt Yok</h3>
+              <p className="text-system-label-secondary">Tamamlanan antrenmanlarınız burada listelenecek.</p>
             </div>
           )}
         </div>

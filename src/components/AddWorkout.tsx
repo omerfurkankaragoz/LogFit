@@ -44,6 +44,11 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
 
   const loadedWorkoutId = useRef<string | null>(existingWorkout?.id || null);
 
+  // Sayfa açıldığında en üste kaydır
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, []);
+
   const isToday = useMemo(() => {
     const todayStr = new Date().toISOString().split('T')[0];
     return date === todayStr;
@@ -151,10 +156,9 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  // Önceki antrenman verisini bulma fonksiyonu (TEKRAR EKLENDİ)
+  // Önceki antrenman verisini bulma fonksiyonu
   const getPreviousExerciseData = (exerciseName: string): Exercise | null => {
     if (!exerciseName) return null;
-    // Tarihe göre eskiden yeniye sıralayıp, bugünden önceki en son kaydı bulalım
     const pastWorkouts = workouts
       .filter(w => new Date(w.date) < new Date(date))
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -255,6 +259,16 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
 
   const handleSaveAndExit = async () => {
     const exercisesToSave = prepareWorkoutData();
+
+    // YENİ EKLENEN KONTROL: 
+    // Kaydetmeden önce en az bir hareket ve o harekete ait en az bir geçerli set olup olmadığına bakar.
+    const hasValidData = exercisesToSave.length > 0 && exercisesToSave.some(ex => ex.sets.length > 0);
+
+    if (!hasValidData) {
+      alert("Kaydetmek için lütfen en az bir hareket ve set bilgisi girin.");
+      return;
+    }
+
     try {
       await onSave({
         date,
@@ -374,8 +388,6 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
         const libraryExercise = allLibraryExercises.find(libEx => libEx.name.toLowerCase() === exercise.name.toLowerCase());
         const imageUrl = getImageUrl(libraryExercise?.gifUrl);
         const isEditable = exercise.id.startsWith('manual-');
-
-        // GÜNCELLENDİ: Önceki veriyi çek
         const previousExercise = getPreviousExerciseData(exercise.name);
 
         return (
@@ -409,13 +421,11 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
 
             <div className="px-4 pb-4 space-y-3">
               {exercise.sets.map((set, setIndex) => {
-                // GÜNCELLENDİ: Önceki set verisini eşleştir
                 const previousSet = previousExercise?.sets[setIndex];
 
                 return (
                   <React.Fragment key={setIndex}>
                     <div className="grid grid-cols-[0.8fr,1.2fr,1.2fr,auto] gap-3 items-center">
-                      {/* GÜNCELLENDİ: Önceki veriyi göster */}
                       <div className="h-12 bg-system-fill-secondary rounded-xl flex flex-col items-center justify-center text-xs text-system-label-secondary font-medium">
                         {previousSet ? (
                           <>
@@ -472,24 +482,34 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
 
   return (
     <div className="bg-system-background min-h-full relative">
-      {/* Header */}
-      <div className="sticky top-[env(safe-area-inset-top)] z-10 bg-system-background/80 backdrop-blur-md border-b border-system-separator/20 transition-colors duration-200">
-        <div className="flex justify-between items-center p-4 relative">
-          <button onClick={handleCancel} className="text-system-blue text-lg font-medium hover:opacity-80 transition-opacity px-2 -ml-2">İptal</button>
+      {/* iOS STİLİ HEADER */}
+      <div className="sticky top-[env(safe-area-inset-top)] z-50 bg-system-background/95 backdrop-blur-xl border-b border-system-separator/30 transition-colors duration-200">
+        <div className="flex justify-between items-center px-4 h-[52px]">
+          {/* Sol Buton: İptal */}
+          <button
+            onClick={handleCancel}
+            className="text-system-blue text-[17px] hover:opacity-70 transition-opacity active:scale-95"
+          >
+            Vazgeç
+          </button>
 
-          <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
-            <h1 className="text-lg font-bold text-system-label">Antrenman</h1>
+          {/* Orta Kısım: Başlık ve Sayaç */}
+          <div className="flex flex-col items-center">
+            <h1 className="text-[17px] font-semibold text-system-label">Antrenman</h1>
             {(isToday || elapsedSeconds > 0) && (
-              <div className={`flex items-center gap-1 font-mono text-sm font-medium px-2 py-0.5 rounded-md mt-0.5 ${isToday ? 'text-system-green bg-system-green/10' : 'text-system-label-secondary bg-system-fill'}`}>
-                <Clock size={12} />
-                <span>{formatTime(elapsedSeconds)}</span>
+              <div className="flex items-center gap-1 text-[11px] font-medium font-mono text-system-label-secondary mt-0.5">
+                <Clock size={12} className={isToday ? "text-system-green" : "text-system-label-secondary"} />
+                <span className={isToday ? 'text-system-green' : 'text-system-label-secondary'}>
+                  {formatTime(elapsedSeconds)}
+                </span>
               </div>
             )}
           </div>
 
+          {/* Sağ Buton: Kaydet */}
           <button
             onClick={handleSaveAndExit}
-            className="text-system-blue text-lg font-bold hover:opacity-80 transition-opacity px-2 -mr-2"
+            className="text-system-blue text-[17px] font-bold hover:opacity-70 transition-opacity active:scale-95"
           >
             Kaydet
           </button>
@@ -497,7 +517,7 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
       </div>
 
       {/* Content */}
-      <div className="p-4 space-y-8 pb-10">
+      <div className="p-4 space-y-8 pb-32">
         {workoutExercises.length > 0 ? (
           <>
             {WorkoutListSection}
