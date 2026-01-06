@@ -89,6 +89,7 @@ const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({ onExerciseSelect, all
             <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-system-label-tertiary" />
             <input
               type="text"
+              autoComplete="off"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Hareket adı ara..."

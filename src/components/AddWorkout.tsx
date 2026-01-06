@@ -167,6 +167,7 @@ const SetRow = memo(({
         <input
           type="number"
           inputMode="decimal"
+          autoComplete="off"
           value={localWeight}
           onChange={handleWeightChange}
           onBlur={handleWeightBlur}
@@ -179,6 +180,7 @@ const SetRow = memo(({
         <input
           type="number"
           inputMode="numeric"
+          autoComplete="off"
           value={localReps}
           onChange={handleRepsChange}
           onBlur={handleRepsBlur}
