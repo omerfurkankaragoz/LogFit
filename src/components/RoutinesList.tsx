@@ -4,6 +4,10 @@ import { Plus, Edit, Trash2, ChevronDown, Copy, Radar, Play, ArrowLeft } from 'l
 import { Exercise as LibraryExercise } from '../services/exerciseApi';
 import { Routine } from '../types';
 
+// Re-export Routine for backwards compatibility
+export type { Routine } from '../types';
+
+
 interface RoutinesListProps {
   routines: Routine[];
   onAddNewRoutine: () => void;

@@ -1,13 +1,181 @@
 // src/components/AddWorkout.tsx
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Plus, Trash2, Search, X, Star, Radar, BadgePlus, Clock, Save } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useRef, useCallback, memo } from 'react';
+import { Plus, Trash2, Search, X, Star, Radar, BadgePlus, Clock } from 'lucide-react';
 import { Workout, Exercise } from '../App';
-import { Routine } from './RoutinesList';
+import { Routine, RoutineExercise } from '../types';
 import { Exercise as LibraryExercise } from '../services/exerciseApi';
 
 const SUPABASE_PROJECT_URL = 'https://ekrhekungvoisfughwuz.supabase.co';
-const BUCKET_NAME = 'images';
+
+// Timer component - isolated to prevent re-rendering parent
+const WorkoutTimer = memo(({ startTimeRef, isToday, existingDuration }: {
+  startTimeRef: React.MutableRefObject<string | null>;
+  isToday: boolean;
+  existingDuration?: number;
+}) => {
+  const [displaySeconds, setDisplaySeconds] = useState(0);
+
+  useEffect(() => {
+    if (!isToday) {
+      if (existingDuration) {
+        setDisplaySeconds(existingDuration);
+      }
+      return;
+    }
+
+    const savedStartTime = localStorage.getItem('currentWorkoutStartTime');
+    let currentStartTimestamp = 0;
+
+    if (savedStartTime) {
+      startTimeRef.current = savedStartTime;
+      currentStartTimestamp = new Date(savedStartTime).getTime();
+    } else {
+      const nowStr = new Date().toISOString();
+      startTimeRef.current = nowStr;
+      localStorage.setItem('currentWorkoutStartTime', nowStr);
+      currentStartTimestamp = new Date(nowStr).getTime();
+    }
+
+    const updateTimer = () => {
+      const now = new Date().getTime();
+      const diff = Math.max(0, Math.floor((now - currentStartTimestamp) / 1000));
+      setDisplaySeconds(diff);
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+
+    return () => clearInterval(interval);
+  }, [isToday, existingDuration, startTimeRef]);
+
+  const formatTime = (totalSeconds: number) => {
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    if (hours > 0) return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  if (!isToday && displaySeconds === 0) return null;
+
+  return (
+    <div className="flex items-center gap-1 text-[11px] font-medium font-mono text-system-label-secondary mt-0.5">
+      <Clock size={12} className={isToday ? "text-system-green" : "text-system-label-secondary"} />
+      <span className={isToday ? 'text-system-green' : 'text-system-label-secondary'}>
+        {formatTime(displaySeconds)}
+      </span>
+    </div>
+  );
+});
+
+// Memoized Set Row Component
+const SetRow = memo(({
+  exerciseId,
+  setIndex,
+  set,
+  previousSet,
+  onUpdateWeight,
+  onUpdateReps,
+  onRemove
+}: {
+  exerciseId: string;
+  setIndex: number;
+  set: { reps: number; weight: number; completed?: boolean };
+  previousSet?: { reps: number; weight: number } | null;
+  onUpdateWeight: (exerciseId: string, setIndex: number, value: number) => void;
+  onUpdateReps: (exerciseId: string, setIndex: number, value: number) => void;
+  onRemove: (exerciseId: string, setIndex: number) => void;
+}) => {
+  // Local state for immediate input feedback
+  const [localWeight, setLocalWeight] = useState(set.weight || '');
+  const [localReps, setLocalReps] = useState(set.reps || '');
+  const weightTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const repsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Sync local state when parent state changes (e.g., after a save)
+  useEffect(() => {
+    setLocalWeight(set.weight || '');
+    setLocalReps(set.reps || '');
+  }, [set.weight, set.reps]);
+
+  const handleWeightChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setLocalWeight(value);
+
+    if (weightTimeoutRef.current) {
+      clearTimeout(weightTimeoutRef.current);
+    }
+
+    weightTimeoutRef.current = setTimeout(() => {
+      onUpdateWeight(exerciseId, setIndex, parseFloat(value) || 0);
+    }, 300);
+  };
+
+  const handleRepsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setLocalReps(value);
+
+    if (repsTimeoutRef.current) {
+      clearTimeout(repsTimeoutRef.current);
+    }
+
+    repsTimeoutRef.current = setTimeout(() => {
+      onUpdateReps(exerciseId, setIndex, parseInt(value) || 0);
+    }, 300);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (weightTimeoutRef.current) clearTimeout(weightTimeoutRef.current);
+      if (repsTimeoutRef.current) clearTimeout(repsTimeoutRef.current);
+    };
+  }, []);
+
+  return (
+    <div className="grid grid-cols-[0.8fr,1.2fr,1.2fr,auto] gap-3 items-center">
+      <div className="h-12 bg-system-fill-secondary rounded-xl flex flex-col items-center justify-center text-xs text-system-label-secondary font-medium">
+        {previousSet ? (
+          <>
+            <span className="text-system-label">{previousSet.weight}kg</span>
+            <span className="text-[10px] opacity-70">{previousSet.reps} tekrar</span>
+          </>
+        ) : (
+          <span className="opacity-50">-</span>
+        )}
+      </div>
+
+      <div className="relative">
+        <input
+          type="number"
+          inputMode="decimal"
+          value={localWeight}
+          onChange={handleWeightChange}
+          placeholder="0"
+          className="w-full h-12 bg-system-background-tertiary text-system-label text-center text-lg font-bold rounded-xl focus:outline-none focus:ring-2 focus:ring-system-blue focus:bg-system-background transition-colors"
+        />
+      </div>
+
+      <div className="relative">
+        <input
+          type="number"
+          inputMode="numeric"
+          value={localReps}
+          onChange={handleRepsChange}
+          placeholder="0"
+          className="w-full h-12 bg-system-background-tertiary text-system-label text-center text-lg font-bold rounded-xl focus:outline-none focus:ring-2 focus:ring-system-blue focus:bg-system-background transition-colors"
+        />
+      </div>
+
+      <button
+        onClick={() => onRemove(exerciseId, setIndex)}
+        className="h-12 w-10 flex items-center justify-center text-system-label-tertiary hover:text-system-red active:scale-90 transition-all bg-system-fill-tertiary rounded-xl"
+      >
+        <Trash2 size={18} />
+      </button>
+    </div>
+  );
+});
 
 interface AddWorkoutProps {
   date: string;
@@ -34,10 +202,7 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
   const [searchQuery, setSearchQuery] = useState('');
 
   // --- SAYAÇ STATE'LERİ ---
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const [startTime, setStartTime] = useState<string | null>(null);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const isInitialLoad = useRef(true);
+  const startTimeRef = useRef<string | null>(null);
 
   const [showLargeImage, setShowLargeImage] = useState(false);
   const [currentLargeImageUrl, setCurrentLargeImageUrl] = useState<string | null>(null);
@@ -97,78 +262,54 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
   }, [existingWorkout?.id]);
 
 
-  // --- SAYAÇ EFFECT'İ ---
-  useEffect(() => {
-    if (!isToday) {
-      if (existingWorkout && existingWorkout.duration) {
-        setElapsedSeconds(existingWorkout.duration);
-      } else {
-        setElapsedSeconds(0);
-      }
-      return;
-    }
-
-    const savedStartTime = localStorage.getItem('currentWorkoutStartTime');
-    let currentStartTimestamp = 0;
-
-    if (savedStartTime) {
-      setStartTime(savedStartTime);
-      currentStartTimestamp = new Date(savedStartTime).getTime();
-    }
-    else if (existingWorkout && existingWorkout.id !== 'new' && existingWorkout.duration) {
-      setElapsedSeconds(existingWorkout.duration);
-      return;
-    }
-    else {
-      const nowStr = new Date().toISOString();
-      setStartTime(nowStr);
-      localStorage.setItem('currentWorkoutStartTime', nowStr);
-      currentStartTimestamp = new Date(nowStr).getTime();
-      setElapsedSeconds(0);
-    }
-
-    const now = new Date().getTime();
-    const diff = Math.max(0, Math.floor((now - currentStartTimestamp) / 1000));
-    setElapsedSeconds(diff);
-
-    timerRef.current = setInterval(() => {
-      const loopNow = new Date().getTime();
-      const loopDiff = Math.max(0, Math.floor((loopNow - currentStartTimestamp) / 1000));
-      setElapsedSeconds(loopDiff);
-
-      if (loopDiff > 7200) {
-        if (timerRef.current) clearInterval(timerRef.current);
-        handleAutoFinish(loopDiff, new Date(currentStartTimestamp).toISOString());
-      }
-    }, 1000);
-
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [existingWorkout?.id, isToday]);
-
-
-  const formatTime = (totalSeconds: number) => {
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-    if (hours > 0) return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-  };
-
-  // Önceki antrenman verisini bulma fonksiyonu
-  const getPreviousExerciseData = (exerciseName: string): Exercise | null => {
-    if (!exerciseName) return null;
+  // Memoize previous exercise data lookup
+  const previousExerciseDataCache = useMemo(() => {
+    const cache: Record<string, Exercise | null> = {};
     const pastWorkouts = workouts
       .filter(w => new Date(w.date) < new Date(date))
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-    for (const prevWorkout of pastWorkouts) {
-      const exercise = prevWorkout.exercises.find(ex => ex.name.toLowerCase() === exerciseName.toLowerCase());
-      if (exercise) return exercise;
-    }
-    return null;
-  };
+    workoutExercises.forEach(ex => {
+      const exerciseName = ex.name.toLowerCase();
+      if (!exerciseName) {
+        cache[exerciseName] = null;
+        return;
+      }
+      for (const prevWorkout of pastWorkouts) {
+        const exercise = prevWorkout.exercises.find(e => e.name.toLowerCase() === exerciseName);
+        if (exercise) {
+          cache[exerciseName] = exercise;
+          return;
+        }
+      }
+      cache[exerciseName] = null;
+    });
+    return cache;
+  }, [workouts, workoutExercises, date]);
+
+  // Memoized update handlers for SetRow
+  const handleUpdateWeight = useCallback((exerciseId: string, setIndex: number, value: number) => {
+    setWorkoutExercises(prev => prev.map(ex =>
+      ex.id === exerciseId
+        ? { ...ex, sets: ex.sets.map((set, i) => i === setIndex ? { ...set, weight: value } : set) }
+        : ex
+    ));
+  }, []);
+
+  const handleUpdateReps = useCallback((exerciseId: string, setIndex: number, value: number) => {
+    setWorkoutExercises(prev => prev.map(ex =>
+      ex.id === exerciseId
+        ? { ...ex, sets: ex.sets.map((set, i) => i === setIndex ? { ...set, reps: value } : set) }
+        : ex
+    ));
+  }, []);
+
+  const handleRemoveSet = useCallback((exerciseId: string, setIndex: number) => {
+    setWorkoutExercises(prev => prev.map(ex =>
+      ex.id === exerciseId ? { ...ex, sets: ex.sets.filter((_, i) => i !== setIndex) } : ex
+    ));
+  }, []);
+
 
   const handleAddExerciseToWorkout = (exercise: LibraryExercise) => {
     const newExercise: Exercise = {
@@ -183,8 +324,8 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
 
   const handleSelectRoutine = (routine: Routine) => {
     const newExercisesFromRoutine = routine.exercises
-      .filter(ex => !workoutExerciseNames.has(ex.name.toLowerCase()))
-      .map((routineExercise, index) => {
+      .filter((ex: RoutineExercise) => !workoutExerciseNames.has(ex.name.toLowerCase()))
+      .map((routineExercise: RoutineExercise, index: number) => {
         const libraryMatch = allLibraryExercises.find(libEx => libEx.name.toLowerCase() === routineExercise.name.toLowerCase());
         return {
           id: `routine-${routineExercise.id}-${Date.now() + index}`,
@@ -221,13 +362,6 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
     }));
   };
 
-  const removeSet = (exerciseId: string, setIndex: number) => {
-    setWorkoutExercises(prev => prev.map(ex => (ex.id === exerciseId ? { ...ex, sets: ex.sets.filter((_, i) => i !== setIndex) } : ex)));
-  };
-
-  const updateSet = (exerciseId: string, setIndex: number, field: 'reps' | 'weight' | 'completed', value: any) => {
-    setWorkoutExercises(prev => prev.map(ex => (ex.id === exerciseId ? { ...ex, sets: ex.sets.map((set, i) => (i === setIndex ? { ...set, [field]: value } : set)) } : ex)));
-  };
 
   const prepareWorkoutData = () => {
     return workoutExercises
@@ -238,24 +372,6 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
       }));
   };
 
-  const handleAutoFinish = async (finalDuration: number, finalStartTimeStr: string) => {
-    const exercisesToSave = prepareWorkoutData();
-    const endTime = new Date().toISOString();
-    try {
-      await onSave({
-        date,
-        exercises: exercisesToSave,
-        startTime: finalStartTimeStr,
-        endTime: endTime,
-        duration: finalDuration,
-        routine_id: workoutRoutineId
-      }, true);
-      localStorage.removeItem('currentWorkoutStartTime');
-      alert('Antrenman süresi 2 saati aştığı için otomatik olarak sonlandırıldı.');
-    } catch (error) {
-      console.error("Auto finish failed", error);
-    }
-  };
 
   const handleSaveAndExit = async () => {
     const exercisesToSave = prepareWorkoutData();
@@ -269,13 +385,18 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
       return;
     }
 
+    // Calculate duration from startTimeRef
+    const currentDuration = startTimeRef.current
+      ? Math.floor((Date.now() - new Date(startTimeRef.current).getTime()) / 1000)
+      : existingWorkout?.duration || 0;
+
     try {
       await onSave({
         date,
         exercises: exercisesToSave,
-        startTime: startTime || undefined,
+        startTime: startTimeRef.current || undefined,
         endTime: undefined,
-        duration: elapsedSeconds,
+        duration: currentDuration,
         routine_id: workoutRoutineId
       }, false);
 
@@ -388,7 +509,7 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
         const libraryExercise = allLibraryExercises.find(libEx => libEx.name.toLowerCase() === exercise.name.toLowerCase());
         const imageUrl = getImageUrl(libraryExercise?.gifUrl);
         const isEditable = exercise.id.startsWith('manual-');
-        const previousExercise = getPreviousExerciseData(exercise.name);
+        const previousExercise = previousExerciseDataCache[exercise.name.toLowerCase()];
 
         return (
           <div key={exercise.id} className="bg-system-background-secondary rounded-2xl overflow-hidden shadow-sm border border-system-separator/10">
@@ -424,49 +545,16 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
                 const previousSet = previousExercise?.sets[setIndex];
 
                 return (
-                  <React.Fragment key={setIndex}>
-                    <div className="grid grid-cols-[0.8fr,1.2fr,1.2fr,auto] gap-3 items-center">
-                      <div className="h-12 bg-system-fill-secondary rounded-xl flex flex-col items-center justify-center text-xs text-system-label-secondary font-medium">
-                        {previousSet ? (
-                          <>
-                            <span className="text-system-label">{previousSet.weight}kg</span>
-                            <span className="text-[10px] opacity-70">{previousSet.reps} tekrar</span>
-                          </>
-                        ) : (
-                          <span className="opacity-50">-</span>
-                        )}
-                      </div>
-
-                      <div className="relative">
-                        <input
-                          type="number"
-                          inputMode="decimal"
-                          value={set.weight || ''}
-                          onChange={(e) => updateSet(exercise.id, setIndex, 'weight', parseFloat(e.target.value) || 0)}
-                          placeholder="0"
-                          className="w-full h-12 bg-system-background-tertiary text-system-label text-center text-lg font-bold rounded-xl focus:outline-none focus:ring-2 focus:ring-system-blue focus:bg-system-background transition-colors"
-                        />
-                      </div>
-
-                      <div className="relative">
-                        <input
-                          type="number"
-                          inputMode="numeric"
-                          value={set.reps || ''}
-                          onChange={(e) => updateSet(exercise.id, setIndex, 'reps', parseInt(e.target.value) || 0)}
-                          placeholder="0"
-                          className="w-full h-12 bg-system-background-tertiary text-system-label text-center text-lg font-bold rounded-xl focus:outline-none focus:ring-2 focus:ring-system-blue focus:bg-system-background transition-colors"
-                        />
-                      </div>
-
-                      <button
-                        onClick={() => removeSet(exercise.id, setIndex)}
-                        className="h-12 w-10 flex items-center justify-center text-system-label-tertiary hover:text-system-red active:scale-90 transition-all bg-system-fill-tertiary rounded-xl"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
-                  </React.Fragment>
+                  <SetRow
+                    key={setIndex}
+                    exerciseId={exercise.id}
+                    setIndex={setIndex}
+                    set={set}
+                    previousSet={previousSet}
+                    onUpdateWeight={handleUpdateWeight}
+                    onUpdateReps={handleUpdateReps}
+                    onRemove={handleRemoveSet}
+                  />
                 );
               })}
 
@@ -496,14 +584,11 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
           {/* Orta Kısım: Başlık ve Sayaç */}
           <div className="flex flex-col items-center">
             <h1 className="text-[17px] font-semibold text-system-label">Antrenman</h1>
-            {(isToday || elapsedSeconds > 0) && (
-              <div className="flex items-center gap-1 text-[11px] font-medium font-mono text-system-label-secondary mt-0.5">
-                <Clock size={12} className={isToday ? "text-system-green" : "text-system-label-secondary"} />
-                <span className={isToday ? 'text-system-green' : 'text-system-label-secondary'}>
-                  {formatTime(elapsedSeconds)}
-                </span>
-              </div>
-            )}
+            <WorkoutTimer
+              startTimeRef={startTimeRef}
+              isToday={isToday}
+              existingDuration={existingWorkout?.duration}
+            />
           </div>
 
           {/* Sağ Buton: Kaydet */}
