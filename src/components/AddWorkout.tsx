@@ -69,7 +69,8 @@ const WorkoutTimer = memo(({ startTimeRef, isToday, existingDuration }: {
   );
 });
 
-// Memoized Set Row Component
+// Memoized Set Row Component - uses local state for immediate feedback
+// Parent state only updates on blur (when user leaves input)
 const SetRow = memo(({
   exerciseId,
   setIndex,
@@ -87,50 +88,67 @@ const SetRow = memo(({
   onUpdateReps: (exerciseId: string, setIndex: number, value: number) => void;
   onRemove: (exerciseId: string, setIndex: number) => void;
 }) => {
-  // Local state for immediate input feedback
-  const [localWeight, setLocalWeight] = useState(set.weight || '');
-  const [localReps, setLocalReps] = useState(set.reps || '');
-  const weightTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const repsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Local state for immediate input feedback - no delay
+  const [localWeight, setLocalWeight] = useState<string>(String(set.weight || ''));
+  const [localReps, setLocalReps] = useState<string>(String(set.reps || ''));
 
-  // Sync local state when parent state changes (e.g., after a save)
+  // Track if we have pending changes to commit
+  const pendingWeightRef = useRef<string | null>(null);
+  const pendingRepsRef = useRef<string | null>(null);
+
+  // Sync local state only when parent explicitly changes (e.g., adding a new set copies previous values)
+  const prevSetWeightRef = useRef(set.weight);
+  const prevSetRepsRef = useRef(set.reps);
+
   useEffect(() => {
-    setLocalWeight(set.weight || '');
-    setLocalReps(set.reps || '');
+    // Only sync if parent value changed externally (not from our own blur update)
+    if (set.weight !== prevSetWeightRef.current && pendingWeightRef.current === null) {
+      setLocalWeight(String(set.weight || ''));
+    }
+    if (set.reps !== prevSetRepsRef.current && pendingRepsRef.current === null) {
+      setLocalReps(String(set.reps || ''));
+    }
+    prevSetWeightRef.current = set.weight;
+    prevSetRepsRef.current = set.reps;
   }, [set.weight, set.reps]);
+
+  // Commit pending changes on unmount
+  useEffect(() => {
+    return () => {
+      if (pendingWeightRef.current !== null) {
+        onUpdateWeight(exerciseId, setIndex, parseFloat(pendingWeightRef.current) || 0);
+      }
+      if (pendingRepsRef.current !== null) {
+        onUpdateReps(exerciseId, setIndex, parseInt(pendingRepsRef.current) || 0);
+      }
+    };
+  }, [exerciseId, setIndex, onUpdateWeight, onUpdateReps]);
 
   const handleWeightChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setLocalWeight(value);
-
-    if (weightTimeoutRef.current) {
-      clearTimeout(weightTimeoutRef.current);
-    }
-
-    weightTimeoutRef.current = setTimeout(() => {
-      onUpdateWeight(exerciseId, setIndex, parseFloat(value) || 0);
-    }, 300);
+    pendingWeightRef.current = value;
   };
 
   const handleRepsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setLocalReps(value);
-
-    if (repsTimeoutRef.current) {
-      clearTimeout(repsTimeoutRef.current);
-    }
-
-    repsTimeoutRef.current = setTimeout(() => {
-      onUpdateReps(exerciseId, setIndex, parseInt(value) || 0);
-    }, 300);
+    pendingRepsRef.current = value;
   };
 
-  useEffect(() => {
-    return () => {
-      if (weightTimeoutRef.current) clearTimeout(weightTimeoutRef.current);
-      if (repsTimeoutRef.current) clearTimeout(repsTimeoutRef.current);
-    };
-  }, []);
+  const handleWeightBlur = () => {
+    if (pendingWeightRef.current !== null) {
+      onUpdateWeight(exerciseId, setIndex, parseFloat(pendingWeightRef.current) || 0);
+      pendingWeightRef.current = null;
+    }
+  };
+
+  const handleRepsBlur = () => {
+    if (pendingRepsRef.current !== null) {
+      onUpdateReps(exerciseId, setIndex, parseInt(pendingRepsRef.current) || 0);
+      pendingRepsRef.current = null;
+    }
+  };
 
   return (
     <div className="grid grid-cols-[0.8fr,1.2fr,1.2fr,auto] gap-3 items-center">
@@ -151,6 +169,7 @@ const SetRow = memo(({
           inputMode="decimal"
           value={localWeight}
           onChange={handleWeightChange}
+          onBlur={handleWeightBlur}
           placeholder="0"
           className="w-full h-12 bg-system-background-tertiary text-system-label text-center text-lg font-bold rounded-xl focus:outline-none focus:ring-2 focus:ring-system-blue focus:bg-system-background transition-colors"
         />
@@ -162,6 +181,7 @@ const SetRow = memo(({
           inputMode="numeric"
           value={localReps}
           onChange={handleRepsChange}
+          onBlur={handleRepsBlur}
           placeholder="0"
           className="w-full h-12 bg-system-background-tertiary text-system-label text-center text-lg font-bold rounded-xl focus:outline-none focus:ring-2 focus:ring-system-blue focus:bg-system-background transition-colors"
         />
@@ -262,15 +282,23 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
   }, [existingWorkout?.id]);
 
 
-  // Memoize previous exercise data lookup
+  // Track exercise names with ref to avoid recalculating on set changes
+  const exerciseNamesRef = useRef<string>('');
+  const currentExerciseNames = workoutExercises.map(ex => ex.name.toLowerCase()).join('|');
+  if (currentExerciseNames !== exerciseNamesRef.current) {
+    exerciseNamesRef.current = currentExerciseNames;
+  }
+  const exerciseNamesKey = exerciseNamesRef.current;
+
+  // Memoize previous exercise data lookup - only recalculates when exercise names change
   const previousExerciseDataCache = useMemo(() => {
     const cache: Record<string, Exercise | null> = {};
     const pastWorkouts = workouts
       .filter(w => new Date(w.date) < new Date(date))
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-    workoutExercises.forEach(ex => {
-      const exerciseName = ex.name.toLowerCase();
+    const exerciseNames = exerciseNamesKey.split('|').filter(Boolean);
+    exerciseNames.forEach(exerciseName => {
       if (!exerciseName) {
         cache[exerciseName] = null;
         return;
@@ -285,7 +313,7 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
       cache[exerciseName] = null;
     });
     return cache;
-  }, [workouts, workoutExercises, date]);
+  }, [workouts, exerciseNamesKey, date]);
 
   // Memoized update handlers for SetRow
   const handleUpdateWeight = useCallback((exerciseId: string, setIndex: number, value: number) => {
@@ -352,7 +380,7 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
     setWorkoutExercises(prev => prev.map(ex => (ex.id === exerciseId && ex.id.startsWith('manual-')) ? { ...ex, name } : ex));
   };
 
-  const addSet = (exerciseId: string) => {
+  const addSet = useCallback((exerciseId: string) => {
     setWorkoutExercises(prev => prev.map(ex => {
       if (ex.id === exerciseId) {
         const lastSet = ex.sets.length > 0 ? ex.sets[ex.sets.length - 1] : { reps: 0, weight: 0, completed: false };
@@ -360,7 +388,7 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
       }
       return ex;
     }));
-  };
+  }, []);
 
 
   const prepareWorkoutData = () => {
