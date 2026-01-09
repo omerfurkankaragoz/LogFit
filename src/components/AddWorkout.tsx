@@ -1,6 +1,7 @@
 // src/components/AddWorkout.tsx
 
 import React, { useState, useEffect, useMemo, useRef, useCallback, memo } from 'react';
+import { motion } from 'framer-motion';
 import { Plus, Trash2, Search, X, Star, Radar, BadgePlus, Clock } from 'lucide-react';
 import { Workout, Exercise } from '../App';
 import { Routine, RoutineExercise } from '../types';
@@ -152,7 +153,7 @@ const SetRow = memo(({
 
   return (
     <div className="grid grid-cols-[0.8fr,1.2fr,1.2fr,auto] gap-3 items-center">
-      <div className="h-12 bg-system-fill-secondary rounded-xl flex flex-col items-center justify-center text-xs text-system-label-secondary font-medium">
+      <div className="h-14 bg-system-fill-secondary rounded-xl flex flex-col items-center justify-center text-sm text-system-label-secondary font-medium">
         {previousSet ? (
           <>
             <span className="text-system-label">{previousSet.weight}kg</span>
@@ -172,7 +173,7 @@ const SetRow = memo(({
           onChange={handleWeightChange}
           onBlur={handleWeightBlur}
           placeholder="0"
-          className="w-full h-12 bg-system-background-tertiary text-system-label text-center text-lg font-bold rounded-xl focus:outline-none focus:ring-2 focus:ring-system-blue focus:bg-system-background transition-colors"
+          className="w-full h-14 bg-system-background-tertiary text-system-label text-center text-xl font-bold rounded-xl focus:outline-none focus:ring-2 focus:ring-system-blue focus:bg-system-background transition-colors"
         />
       </div>
 
@@ -185,15 +186,15 @@ const SetRow = memo(({
           onChange={handleRepsChange}
           onBlur={handleRepsBlur}
           placeholder="0"
-          className="w-full h-12 bg-system-background-tertiary text-system-label text-center text-lg font-bold rounded-xl focus:outline-none focus:ring-2 focus:ring-system-blue focus:bg-system-background transition-colors"
+          className="w-full h-14 bg-system-background-tertiary text-system-label text-center text-xl font-bold rounded-xl focus:outline-none focus:ring-2 focus:ring-system-blue focus:bg-system-background transition-colors"
         />
       </div>
 
       <button
         onClick={() => onRemove(exerciseId, setIndex)}
-        className="h-12 w-10 flex items-center justify-center text-system-label-tertiary hover:text-system-red active:scale-90 transition-all bg-system-fill-tertiary rounded-xl"
+        className="h-14 w-12 flex items-center justify-center text-system-label-tertiary hover:text-system-red active:scale-90 transition-all bg-system-fill-tertiary rounded-xl"
       >
-        <Trash2 size={18} />
+        <Trash2 size={20} />
       </button>
     </div>
   );
@@ -221,6 +222,9 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
   });
 
   const [isRoutinePickerOpen, setRoutinePickerOpen] = useState(false);
+  const [isExercisePickerOpen, setExercisePickerOpen] = useState(false);
+  const [collapsedExerciseIds, setCollapsedExerciseIds] = useState<Set<string>>(new Set());
+  const [exerciseToDelete, setExerciseToDelete] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   // --- SAYAÇ STATE'LERİ ---
@@ -350,6 +354,7 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
     };
     setWorkoutExercises(prev => [newExercise, ...prev]);
     setSearchQuery('');
+    setExercisePickerOpen(false);
   };
 
   const handleSelectRoutine = (routine: Routine) => {
@@ -449,11 +454,6 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
     return `${SUPABASE_PROJECT_URL}/storage/v1/object/public/images/exercises/${imagePath}`;
   };
 
-  const handleImageClick = (imageUrl: string) => {
-    setCurrentLargeImageUrl(imageUrl);
-    setShowLargeImage(true);
-  };
-
   const closeLargeImage = () => {
     setShowLargeImage(false);
     setCurrentLargeImageUrl(null);
@@ -467,131 +467,105 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
     </button>
   );
 
-  const AddExerciseSection = (
-    <div className="bg-system-background-secondary rounded-2xl overflow-hidden shadow-sm border border-system-separator/10 mb-20">
-      <div className="p-4 pb-2">
-        <h3 className="text-lg font-bold text-system-label mb-4 flex items-center gap-2"> <Plus className="w-5 h-5 text-system-blue" /> Hareket Ekle</h3>
-        <div className="space-y-4">
-          <div className="relative">
-            <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-system-label-tertiary" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Hareket ara..."
-              className="w-full pl-10 pr-10 py-3.5 bg-system-background-tertiary text-system-label rounded-xl focus:outline-none focus:ring-2 focus:ring-system-blue text-lg"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center justify-center w-6 h-6 bg-system-label-tertiary rounded-full text-system-background active:scale-90 transition-transform"
-              >
-                <X size={16} />
-              </button>
-            )}
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <button onClick={() => setRoutinePickerOpen(true)} className="w-full text-left p-4 flex flex-col items-center justify-center gap-2 bg-system-background-tertiary rounded-xl hover:bg-system-fill-tertiary transition-colors active:scale-95">
-              <Radar size={24} className="text-system-orange" />
-              <span className="text-system-label font-semibold text-sm">Rutinden Seç</span>
-            </button>
-            <button onClick={addManualExercise} className="w-full text-left p-4 flex flex-col items-center justify-center gap-2 bg-system-background-tertiary rounded-xl hover:bg-system-fill-tertiary transition-colors active:scale-95">
-              <BadgePlus size={24} className="text-system-green" />
-              <span className="text-system-label font-semibold text-sm">Manuel Ekle</span>
-            </button>
-          </div>
-        </div>
-      </div>
-      <div className="max-h-[40vh] overflow-y-auto scrollbar-thin mt-2">
-        {searchQuery.trim() ? (
-          searchedExercises.length > 0 ? (
-            searchedExercises.map(exercise => (
-              <ExerciseListItem key={exercise.id} exercise={exercise} onClick={handleAddExerciseToWorkout} />
-            ))
-          ) : (
-            <p className="text-md text-center text-system-label-secondary py-8 px-4">Sonuç bulunamadı.</p>
-          )
-        ) : (
-          <>
-            {favoriteLibraryExercises.length > 0 && (
-              <div>
-                <p className="text-system-label-secondary px-4 py-2 text-xs font-bold uppercase tracking-wider bg-system-background-tertiary/50 sticky top-0 backdrop-blur-md">Favoriler</p>
-                {favoriteLibraryExercises.map(exercise => (
-                  <ExerciseListItem key={exercise.id} exercise={exercise} isFavorite onClick={handleAddExerciseToWorkout} />
-                ))}
-              </div>
-            )}
-            <div>
-              <p className="text-system-label-secondary px-4 py-2 text-xs font-bold uppercase tracking-wider bg-system-background-tertiary/50 sticky top-0 backdrop-blur-md">Tüm Hareketler</p>
-              {otherLibraryExercises.map(exercise => (
-                <ExerciseListItem key={exercise.id} exercise={exercise} onClick={handleAddExerciseToWorkout} />
-              ))}
-            </div>
-          </>
-        )}
-      </div>
-    </div>
-  );
+
 
   const WorkoutListSection = (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {workoutExercises.map((exercise) => {
         const libraryExercise = allLibraryExercises.find(libEx => libEx.name.toLowerCase() === exercise.name.toLowerCase());
         const imageUrl = getImageUrl(libraryExercise?.gifUrl);
         const isEditable = exercise.id.startsWith('manual-');
         const previousExercise = previousExerciseDataCache[exercise.name.toLowerCase()];
+        const isCollapsed = collapsedExerciseIds.has(exercise.id);
+        const totalSets = exercise.sets.length;
+        const filledSets = exercise.sets.filter(s => s.weight > 0 || s.reps > 0).length;
+
+        const toggleCollapse = () => {
+          setCollapsedExerciseIds(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(exercise.id)) {
+              newSet.delete(exercise.id);
+            } else {
+              newSet.add(exercise.id);
+            }
+            return newSet;
+          });
+        };
 
         return (
           <div key={exercise.id} className="bg-system-background-secondary rounded-2xl overflow-hidden shadow-sm border border-system-separator/10">
-            <div className="p-4 flex items-start gap-4 border-b border-system-separator/20 bg-system-background-tertiary/30">
-              <button onClick={() => handleImageClick(imageUrl)} className="flex-shrink-0 active:scale-95 transition-transform">
-                <img src={imageUrl} alt={exercise.name} className="w-14 h-14 rounded-xl object-cover shadow-sm" />
+            {/* Header - Clickable to collapse/expand */}
+            <div className="flex items-center gap-3 p-4 bg-system-background-tertiary/30">
+              {/* Exercise Info - Clickable to toggle */}
+              <button onClick={toggleCollapse} className="flex-1 flex items-center gap-3 min-w-0 text-left active:opacity-70 transition-opacity">
+                <img src={imageUrl} alt={exercise.name} className="w-12 h-12 rounded-xl object-cover shadow-sm flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-lg font-bold text-system-label truncate">{exercise.name || 'Yeni Hareket'}</h3>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-xs text-system-blue font-medium">{libraryExercise?.bodyPart ? libraryExercise.bodyPart.charAt(0).toUpperCase() + libraryExercise.bodyPart.slice(1) : 'Genel'}</span>
+                    <span className="text-xs text-system-label-tertiary">•</span>
+                    <span className="text-xs text-system-label-secondary">{filledSets}/{totalSets} set</span>
+                  </div>
+                </div>
               </button>
-              <div className="flex-1 min-w-0 py-1">
-                <input
-                  type="text"
-                  value={exercise.name}
-                  onChange={(e) => updateExerciseName(exercise.id, e.target.value)}
-                  placeholder="Hareket Adı Girin"
-                  readOnly={!isEditable}
-                  className={`w-full bg-transparent text-xl font-bold text-system-label focus:outline-none truncate ${!isEditable ? 'cursor-default' : 'cursor-text border-b border-system-blue/50 pb-1'}`}
-                />
-                <p className="text-sm text-system-blue font-medium mt-1">{libraryExercise?.bodyPart ? libraryExercise.bodyPart.charAt(0).toUpperCase() + libraryExercise.bodyPart.slice(1) : 'Genel'}</p>
+
+              {/* Delete Button */}
+              <button
+                onClick={() => setExerciseToDelete(exercise.id)}
+                className="w-10 h-10 flex items-center justify-center rounded-xl bg-system-red/10 active:bg-system-red/20 active:scale-95 transition-all"
+              >
+                <Trash2 size={20} className="text-system-red" />
+              </button>
+            </div>
+
+            {/* Expandable Content */}
+            {!isCollapsed && (
+              <div className="animate-in slide-in-from-top-2 duration-200">
+                {/* Manual exercise name input */}
+                {isEditable && (
+                  <div className="px-4 pt-2">
+                    <input
+                      type="text"
+                      value={exercise.name}
+                      onChange={(e) => updateExerciseName(exercise.id, e.target.value)}
+                      placeholder="Hareket Adı Girin"
+                      className="w-full bg-system-background-tertiary text-system-label font-semibold px-3 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-system-blue"
+                    />
+                  </div>
+                )}
+
+                {/* Column Headers */}
+                <div className="grid grid-cols-[0.8fr,1.2fr,1.2fr,auto] gap-3 px-4 py-3 text-sm font-bold text-system-label-secondary uppercase tracking-wide text-center items-center border-b border-system-separator/10">
+                  <span>Önceki</span>
+                  <span>KG</span>
+                  <span>Tekrar</span>
+                  <span className="w-12"></span>
+                </div>
+
+                {/* Sets */}
+                <div className="px-4 py-3 space-y-3">
+                  {exercise.sets.map((set, setIndex) => {
+                    const previousSet = previousExercise?.sets[setIndex];
+                    return (
+                      <SetRow
+                        key={setIndex}
+                        exerciseId={exercise.id}
+                        setIndex={setIndex}
+                        set={set}
+                        previousSet={previousSet}
+                        onUpdateWeight={handleUpdateWeight}
+                        onUpdateReps={handleUpdateReps}
+                        onRemove={handleRemoveSet}
+                      />
+                    );
+                  })}
+
+                  <button onClick={() => addSet(exercise.id)} className="w-full py-3.5 mt-2 text-system-blue text-center font-bold text-base bg-system-blue/10 rounded-xl hover:bg-system-blue/20 active:scale-95 transition-all flex items-center justify-center gap-2">
+                    <Plus size={20} /> SET EKLE
+                  </button>
+                </div>
               </div>
-              <button onClick={() => removeWorkoutExercise(exercise.id)} className="p-2 text-system-label-tertiary hover:text-system-red transition-colors bg-system-fill rounded-lg">
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-[0.8fr,1.2fr,1.2fr,auto] gap-3 px-4 py-2 text-xs font-semibold text-system-label-secondary uppercase tracking-wide text-center items-center">
-              <span>Önceki</span>
-              <span>KG</span>
-              <span>Tekrar</span>
-              <span className="w-8"></span>
-            </div>
-
-            <div className="px-4 pb-4 space-y-3">
-              {exercise.sets.map((set, setIndex) => {
-                const previousSet = previousExercise?.sets[setIndex];
-
-                return (
-                  <SetRow
-                    key={setIndex}
-                    exerciseId={exercise.id}
-                    setIndex={setIndex}
-                    set={set}
-                    previousSet={previousSet}
-                    onUpdateWeight={handleUpdateWeight}
-                    onUpdateReps={handleUpdateReps}
-                    onRemove={handleRemoveSet}
-                  />
-                );
-              })}
-
-              <button onClick={() => addSet(exercise.id)} className="w-full py-3 mt-2 text-system-blue text-center font-bold text-sm bg-system-blue/10 rounded-xl hover:bg-system-blue/20 active:scale-95 transition-all flex items-center justify-center gap-2">
-                <Plus size={18} /> SET EKLE
-              </button>
-            </div>
+            )}
           </div>
         );
       })}
@@ -632,33 +606,63 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
       </div>
 
       {/* Content */}
-      <div className="p-4 space-y-8 pb-32">
-        {workoutExercises.length > 0 ? (
-          <>
-            {WorkoutListSection}
-
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center" aria-hidden="true">
-                <div className="w-full border-t border-system-separator/30"></div>
-              </div>
-              <div className="relative flex justify-center">
-                <span className="px-3 bg-system-background text-sm font-medium text-system-label-secondary">Daha Fazla Hareket</span>
-              </div>
-            </div>
-
-            {AddExerciseSection}
-          </>
-        ) : (
-          <div className="space-y-6">
-            <div className="text-center py-10">
-              <h2 className="text-2xl font-bold text-system-label mb-2">Antrenmana Başla</h2>
-              <p className="text-system-label-secondary">Aşağıdan hareket ekleyerek başla.</p>
-            </div>
-            {AddExerciseSection}
+      <div className="p-4 space-y-4 pb-28">
+        {/* Favorite Quick-Access Chips */}
+        {favoriteLibraryExercises.length > 0 && (
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+            <Star size={14} className="text-system-yellow fill-system-yellow flex-shrink-0" />
+            {favoriteLibraryExercises.slice(0, 6).map(ex => (
+              <button
+                key={ex.id}
+                onClick={() => handleAddExerciseToWorkout(ex)}
+                className="flex-shrink-0 px-3 py-1.5 bg-system-yellow/10 text-system-yellow rounded-full text-sm font-medium active:scale-95 transition-transform whitespace-nowrap"
+              >
+                {ex.name.length > 15 ? ex.name.slice(0, 15) + '...' : ex.name}
+              </button>
+            ))}
           </div>
         )}
 
+        {workoutExercises.length > 0 ? (
+          <>
+            {WorkoutListSection}
+          </>
+        ) : (
+          <div className="text-center py-16">
+            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-system-blue/10 flex items-center justify-center">
+              <Plus size={40} className="text-system-blue" />
+            </div>
+            <h2 className="text-xl font-bold text-system-label mb-2">Antrenmana Başla</h2>
+            <p className="text-system-label-secondary text-sm mb-6">Sağ alttaki + butonuna tıklayarak<br />hareket ekle.</p>
+
+            {/* Quick Routine Start */}
+            {routines.length > 0 && (
+              <div className="mt-6">
+                <p className="text-xs text-system-label-tertiary uppercase tracking-wide mb-3">Hızlı Başlat</p>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {routines.slice(0, 3).map(routine => (
+                    <button
+                      key={routine.id}
+                      onClick={() => handleSelectRoutine(routine)}
+                      className="px-4 py-2 bg-system-background-secondary rounded-xl text-sm font-medium text-system-label border border-system-separator/20 active:scale-95 transition-transform"
+                    >
+                      {routine.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* Floating Action Button (FAB) */}
+      <button
+        onClick={() => setExercisePickerOpen(true)}
+        className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 w-14 h-14 bg-system-blue rounded-full shadow-lg shadow-system-blue/30 flex items-center justify-center text-white z-40 active:scale-90 transition-transform"
+      >
+        <Plus size={28} strokeWidth={2.5} />
+      </button>
 
       {/* Modals */}
       {showLargeImage && currentLargeImageUrl && (
@@ -672,6 +676,7 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
         </div>
       )}
 
+      {/* Routine Picker Bottom Sheet */}
       {isRoutinePickerOpen && (
         <div className="fixed inset-0 z-[60] flex items-end justify-center">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setRoutinePickerOpen(false)}></div>
@@ -692,6 +697,129 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
               )) : (
                 <p className="text-center text-system-label-secondary py-10">Kayıtlı rutin bulunmuyor.</p>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Exercise Picker Bottom Sheet */}
+      {isExercisePickerOpen && (
+        <div className="fixed inset-0 z-[60] flex items-end justify-center">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { setExercisePickerOpen(false); setSearchQuery(''); }}></div>
+          <motion.div
+            drag="y"
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={{ top: 0, bottom: 0.5 }}
+            onDragEnd={(_, info) => {
+              if (info.offset.y > 100 || info.velocity.y > 500) {
+                setExercisePickerOpen(false);
+                setSearchQuery('');
+              }
+            }}
+            className="relative w-full max-w-md bg-system-background-secondary rounded-t-3xl pb-[env(safe-area-inset-bottom)] max-h-[70vh] flex flex-col touch-none"
+          >
+            {/* Drag Handle */}
+            <div className="p-4 border-b border-system-separator/20 cursor-grab active:cursor-grabbing">
+              <div className="w-12 h-1.5 bg-system-label-tertiary rounded-full mx-auto mb-4"></div>
+              <h2 className="text-xl font-bold text-center text-system-label mb-4">Hareket Ekle</h2>
+
+              {/* Search */}
+              <div className="relative">
+                <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-system-label-tertiary" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Hareket ara..."
+                  autoFocus
+                  className="w-full pl-10 pr-10 py-3 bg-system-background-tertiary text-system-label rounded-xl focus:outline-none focus:ring-2 focus:ring-system-blue"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center justify-center w-6 h-6 bg-system-label-tertiary rounded-full text-system-background active:scale-90 transition-transform"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+
+              {/* Quick Actions */}
+              <div className="grid grid-cols-2 gap-3 mt-4">
+                <button onClick={() => { setExercisePickerOpen(false); setRoutinePickerOpen(true); }} className="p-3 flex items-center justify-center gap-2 bg-system-background-tertiary rounded-xl active:scale-95 transition-transform">
+                  <Radar size={20} className="text-system-orange" />
+                  <span className="text-system-label font-semibold text-sm">Rutinden Seç</span>
+                </button>
+                <button onClick={() => { addManualExercise(); setExercisePickerOpen(false); }} className="p-3 flex items-center justify-center gap-2 bg-system-background-tertiary rounded-xl active:scale-95 transition-transform">
+                  <BadgePlus size={20} className="text-system-green" />
+                  <span className="text-system-label font-semibold text-sm">Manuel Ekle</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Exercise List */}
+            <div className="flex-1 overflow-y-auto">
+              {searchQuery.trim() ? (
+                searchedExercises.length > 0 ? (
+                  searchedExercises.map(exercise => (
+                    <ExerciseListItem key={exercise.id} exercise={exercise} onClick={handleAddExerciseToWorkout} />
+                  ))
+                ) : (
+                  <p className="text-center text-system-label-secondary py-8">Sonuç bulunamadı.</p>
+                )
+              ) : (
+                <>
+                  {favoriteLibraryExercises.length > 0 && (
+                    <div>
+                      <p className="text-system-label-secondary px-4 py-2 text-xs font-bold uppercase tracking-wider bg-system-background-tertiary/50 sticky top-0 backdrop-blur-md">Favoriler</p>
+                      {favoriteLibraryExercises.map(exercise => (
+                        <ExerciseListItem key={exercise.id} exercise={exercise} isFavorite onClick={handleAddExerciseToWorkout} />
+                      ))}
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-system-label-secondary px-4 py-2 text-xs font-bold uppercase tracking-wider bg-system-background-tertiary/50 sticky top-0 backdrop-blur-md">Tüm Hareketler</p>
+                    {otherLibraryExercises.map(exercise => (
+                      <ExerciseListItem key={exercise.id} exercise={exercise} onClick={handleAddExerciseToWorkout} />
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Delete Exercise Confirmation Modal */}
+      {exerciseToDelete && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setExerciseToDelete(null)} />
+          <div className="relative bg-system-background-secondary rounded-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200 shadow-2xl">
+            <div className="p-6 text-center">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-system-red/10 flex items-center justify-center">
+                <Trash2 size={32} className="text-system-red" />
+              </div>
+              <h3 className="text-xl font-bold text-system-label mb-2">Hareketi Sil</h3>
+              <p className="text-system-label-secondary text-sm">
+                Bu hareketi antrenmanınızdan silmek istediğinizden emin misiniz?
+              </p>
+            </div>
+            <div className="flex border-t border-system-separator/20">
+              <button
+                onClick={() => setExerciseToDelete(null)}
+                className="flex-1 py-4 text-system-blue font-semibold text-[17px] border-r border-system-separator/20 active:bg-system-fill transition-colors"
+              >
+                İptal
+              </button>
+              <button
+                onClick={() => {
+                  removeWorkoutExercise(exerciseToDelete);
+                  setExerciseToDelete(null);
+                }}
+                className="flex-1 py-4 text-system-red font-bold text-[17px] active:bg-system-fill transition-colors"
+              >
+                Sil
+              </button>
             </div>
           </div>
         </div>
