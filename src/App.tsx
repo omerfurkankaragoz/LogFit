@@ -412,7 +412,7 @@ function App() {
       <nav className="fixed bottom-0 left-0 right-0 bg-system-background-secondary/90 backdrop-blur-xl border-t border-system-separator z-50">
         <div className="max-w-md mx-auto flex justify-around px-2 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
           {navItems.map(item => (
-            <button key={item.view} onClick={() => setCurrentView(item.view as View)} className={`flex flex-col items-center justify-center gap-1 w-1/5 py-1 rounded-lg transition-all duration-200 ${currentView === item.view ? 'text-system-blue scale-105' : 'text-system-label-secondary hover:text-system-label'}`}>
+            <button key={item.view} onClick={() => setCurrentView(item.view as View)} className={`flex flex-col items-center justify-center gap-1 min-w-[44px] min-h-[44px] px-3 py-2 rounded-lg transition-all duration-200 ${currentView === item.view ? 'text-system-blue scale-105' : 'text-system-label-secondary active:text-system-label active:scale-95'}`}>
               <item.icon size={24} strokeWidth={currentView === item.view ? 2.5 : 2} />
               <span className="text-[10px] font-medium">{item.label}</span>
             </button>
