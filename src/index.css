@@ -2,15 +2,39 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ===== iOS Native Foundation ===== */
 html, body {
     overscroll-behavior-y: none;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* Prevent iOS zoom on input focus */
+    touch-action: manipulation;
+    /* Remove tap highlight on iOS */
+    -webkit-tap-highlight-color: transparent;
 }
 
 body {
     background-color: #000000;
     color: rgba(255, 255, 255, 0.85);
+}
+
+/* ===== Dynamic Viewport Height Support ===== */
+@supports (height: 100dvh) {
+    .min-h-dvh {
+        min-height: 100dvh;
+    }
+    .h-dvh {
+        height: 100dvh;
+    }
+}
+
+@supports not (height: 100dvh) {
+    .min-h-dvh {
+        min-height: 100vh;
+    }
+    .h-dvh {
+        height: 100vh;
+    }
 }
 
 /* ===== YouCan Style Components ===== */

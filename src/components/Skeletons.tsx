@@ -5,14 +5,18 @@ export const Skeleton = ({ className }: { className?: string }) => (
     <div className={`animate-pulse bg-system-fill rounded-lg ${className}`} />
 );
 
-// Alt Navigasyon için Skeleton (Sabit)
+// Alt Navigasyon için Skeleton (Premium Glassmorphism Style)
 export const BottomNavSkeleton = () => (
-    <nav className="fixed bottom-0 left-0 right-0 bg-system-background-secondary/90 backdrop-blur-xl border-t border-system-separator z-50">
-        <div className="max-w-md mx-auto flex justify-around px-2 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
-            {[...Array(5)].map((_, i) => (
-                <div key={i} className="flex flex-col items-center gap-1 w-1/5 py-1">
-                    <Skeleton className="w-6 h-6 rounded-md" />
-                    <Skeleton className="w-8 h-2 rounded-md" />
+    <nav className="fixed bottom-0 left-0 right-0 z-50">
+        {/* Premium Glassmorphism Background */}
+        <div className="absolute inset-0 bg-gradient-to-t from-system-background-secondary/95 via-system-background-secondary/90 to-system-background-secondary/80 backdrop-blur-2xl border-t border-white/[0.08]" />
+        
+        {/* Navigation Content */}
+        <div className="relative max-w-md mx-auto flex justify-around items-end px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+            {[...Array(4)].map((_, i) => (
+                <div key={i} className="flex flex-col items-center gap-1.5 min-w-[56px] py-2">
+                    <Skeleton className="w-7 h-7 rounded-lg" />
+                    <Skeleton className="w-10 h-2.5 rounded-md" />
                 </div>
             ))}
         </div>
