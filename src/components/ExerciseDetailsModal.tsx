@@ -1,5 +1,6 @@
 // src/components/ExerciseDetailsModal.tsx
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import { Plus, ChevronDown, ChevronUp, Flame, Wrench, Gauge, Star, AlertTriangle } from 'lucide-react';
 import { Exercise } from '../services/exerciseApi';
 
@@ -103,14 +104,35 @@ const ExerciseDetailsModal: React.FC<ExerciseDetailsModalProps> = ({ exercise, o
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end justify-center">
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose}></div>
+      {/* Backdrop - larger clickable area */}
+      <motion.div
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        onClick={onClose}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+      />
 
-      {/* Modal Container */}
-      <div className="relative w-full max-w-md bg-system-background rounded-t-3xl animate-in slide-in-from-bottom duration-300 flex flex-col max-h-[90vh]">
-
-        {/* Handle */}
-        <div className="flex-shrink-0 pt-3 pb-2">
-          <div className="w-12 h-1.5 bg-system-label-tertiary rounded-full mx-auto"></div>
+      {/* Modal Container - Draggable */}
+      <motion.div
+        className="relative w-full max-w-md bg-system-background rounded-t-3xl flex flex-col max-h-[80vh]"
+        initial={{ y: '100%' }}
+        animate={{ y: 0 }}
+        exit={{ y: '100%' }}
+        transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+        drag="y"
+        dragConstraints={{ top: 0, bottom: 0 }}
+        dragElastic={{ top: 0, bottom: 0.5 }}
+        onDragEnd={(_, info) => {
+          if (info.offset.y > 100 || info.velocity.y > 500) {
+            onClose();
+          }
+        }}
+      >
+        {/* Drag Handle - larger touch area */}
+        <div className="flex-shrink-0 pt-3 pb-2 cursor-grab active:cursor-grabbing">
+          <div className="w-10 h-1 bg-white/30 rounded-full mx-auto" />
+          <div className="h-4" /> {/* Extra touch area */}
         </div>
 
         {/* Scrollable Content */}
@@ -231,7 +253,7 @@ const ExerciseDetailsModal: React.FC<ExerciseDetailsModalProps> = ({ exercise, o
             Antrenmana Ekle
           </button>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 };

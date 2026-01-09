@@ -56,6 +56,10 @@ function App() {
   const [allLibraryExercises, setAllLibraryExercises] = useState<LibraryExercise[]>([]);
   const [favoriteExercises, setFavoriteExercises] = useState<string[]>([]);
 
+  // Custom confirmation modal state
+  const [confirmFinishModalOpen, setConfirmFinishModalOpen] = useState(false);
+  const [workoutToFinish, setWorkoutToFinish] = useState<Workout | null>(null);
+
   const [userProfile, setUserProfile] = useState<{ fullName: string | null, avatarUrl: string | null }>({ fullName: null, avatarUrl: null });
 
   useEffect(() => {
@@ -207,8 +211,18 @@ function App() {
     }
   };
 
-  const handleFinishWorkoutFromCalendar = async (workout: Workout) => {
-    if (!confirm('Antrenmanı bitirmek istediğinize emin misiniz?')) return;
+  const handleFinishWorkoutFromCalendar = (workout: Workout) => {
+    console.log('handleFinishWorkoutFromCalendar called with workout:', workout.id);
+    setWorkoutToFinish(workout);
+    setConfirmFinishModalOpen(true);
+  };
+
+  const confirmFinishWorkout = async () => {
+    if (!workoutToFinish) return;
+
+    const workout = workoutToFinish;
+    setConfirmFinishModalOpen(false);
+    setWorkoutToFinish(null);
 
     const now = new Date();
     let duration = workout.duration || 0;
@@ -240,7 +254,12 @@ function App() {
       console.error("Bitirme hatası:", error);
       alert('Hata: ' + error.message);
     }
-  }
+  };
+
+  const cancelFinishWorkout = () => {
+    setConfirmFinishModalOpen(false);
+    setWorkoutToFinish(null);
+  };
 
   const handleSaveRoutine = async (id: string | null, name: string, exercises: { id: string; name: string }[]) => {
     if (!session) return;
@@ -414,48 +433,48 @@ function App() {
       <nav className="fixed bottom-0 left-0 right-0 z-50">
         {/* Premium Glassmorphism Background */}
         <div className="absolute inset-0 bg-gradient-to-t from-system-background-secondary/95 via-system-background-secondary/90 to-system-background-secondary/80 backdrop-blur-2xl border-t border-white/[0.08]" />
-        
+
         {/* Navigation Content */}
-        <div className="relative max-w-md mx-auto flex justify-around items-end px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+        <div className="relative max-w-md mx-auto grid grid-cols-4 px-1 pt-1 pb-[calc(0.25rem+env(safe-area-inset-bottom))]">
           {NAV_ITEMS.map(item => {
             const isActive = currentView === item.view;
             return (
-              <button 
+              <button
                 key={item.view}
-                onClick={() => setCurrentView(item.view as View)} 
+                onClick={() => setCurrentView(item.view as View)}
                 className={`
-                  relative flex flex-col items-center justify-center gap-1.5
-                  min-w-[56px] min-h-[52px] px-4 py-2 rounded-2xl
+                  relative flex flex-col items-center justify-center gap-0.5
+                  w-full min-h-[44px] py-1 rounded-xl
                   transition-all duration-300 ease-out
-                  ${isActive 
-                    ? 'text-system-blue' 
-                    : 'text-system-label-tertiary active:text-system-label active:scale-90'
+                  ${isActive
+                    ? 'text-system-blue'
+                    : 'text-system-label-tertiary active:text-system-label active:scale-95'
                   }
                 `}
               >
                 {/* Active State Background Indicator */}
                 {isActive && (
-                  <motion.div 
+                  <motion.div
                     layoutId="navIndicator"
                     className="absolute inset-0 bg-system-blue/10 rounded-2xl"
                     transition={{ type: "spring", stiffness: 400, damping: 30 }}
                   />
                 )}
-                
+
                 {/* Icon with subtle animation */}
                 <motion.div
-                  animate={{ 
+                  animate={{
                     scale: isActive ? 1.1 : 1,
                     y: isActive ? -2 : 0
                   }}
                   transition={{ type: "spring", stiffness: 400, damping: 25 }}
                 >
-                  <item.icon 
-                    size={26} 
-                    strokeWidth={isActive ? 2.5 : 1.8} 
+                  <item.icon
+                    size={26}
+                    strokeWidth={isActive ? 2.5 : 1.8}
                   />
                 </motion.div>
-                
+
                 {/* Label */}
                 <span className={`text-[11px] font-semibold tracking-tight ${isActive ? 'opacity-100' : 'opacity-70'}`}>
                   {item.label}
@@ -491,6 +510,40 @@ function App() {
       </main>
 
       {renderBottomNav()}
+
+      {/* Finish Workout Confirmation Modal */}
+      {confirmFinishModalOpen && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={cancelFinishWorkout} />
+          <div className="relative bg-system-background-secondary rounded-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200 shadow-2xl">
+            <div className="p-6 text-center">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-system-red/10 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 text-system-red" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold text-system-label mb-2">Antrenmanı Bitir</h3>
+              <p className="text-system-label-secondary text-sm">
+                Antrenmanı bitirmek istediğinize emin misiniz? Bu işlem geri alınamaz.
+              </p>
+            </div>
+            <div className="flex border-t border-system-separator/20">
+              <button
+                onClick={cancelFinishWorkout}
+                className="flex-1 py-4 text-system-blue font-semibold text-[17px] border-r border-system-separator/20 active:bg-system-fill transition-colors"
+              >
+                İptal
+              </button>
+              <button
+                onClick={confirmFinishWorkout}
+                className="flex-1 py-4 text-system-red font-bold text-[17px] active:bg-system-fill transition-colors"
+              >
+                Bitir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

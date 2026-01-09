@@ -23,6 +23,7 @@ const WorkoutDetails: React.FC<WorkoutDetailsProps> = ({
   onCancel
 }) => {
   const [showComparison, setShowComparison] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   // Sayfa açıldığında en üste kaydır
   useEffect(() => {
@@ -169,7 +170,7 @@ const WorkoutDetails: React.FC<WorkoutDetailsProps> = ({
             <button onClick={onEdit} className="p-2.5 bg-system-fill text-system-blue rounded-full active:scale-90 transition-all hover:bg-system-fill-secondary">
               <Edit size={20} />
             </button>
-            <button onClick={() => { if (confirm('Bu antrenmanı silmek istediğinizden emin misiniz?')) { onDelete(workout.id); } }} className="p-2.5 bg-system-fill text-system-red rounded-full active:scale-90 transition-all hover:bg-system-fill-secondary">
+            <button onClick={() => setShowDeleteModal(true)} className="p-2.5 bg-system-fill text-system-red rounded-full active:scale-90 transition-all hover:bg-system-fill-secondary">
               <Trash2 size={20} />
             </button>
           </div>
@@ -204,8 +205,8 @@ const WorkoutDetails: React.FC<WorkoutDetailsProps> = ({
           <button
             onClick={() => setShowComparison(!showComparison)}
             className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95 ${showComparison
-                ? 'bg-system-orange text-white shadow-lg shadow-system-orange/20'
-                : 'bg-system-background-tertiary text-system-label-secondary hover:bg-system-fill'
+              ? 'bg-system-orange text-white shadow-lg shadow-system-orange/20'
+              : 'bg-system-background-tertiary text-system-label-secondary hover:bg-system-fill'
               }`}
           >
             <TrendingUp size={16} />
@@ -289,6 +290,41 @@ const WorkoutDetails: React.FC<WorkoutDetailsProps> = ({
           })}
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowDeleteModal(false)} />
+          <div className="relative bg-system-background-secondary rounded-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200 shadow-2xl">
+            <div className="p-6 text-center">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-system-red/10 flex items-center justify-center">
+                <Trash2 size={32} className="text-system-red" />
+              </div>
+              <h3 className="text-xl font-bold text-system-label mb-2">Antrenmanı Sil</h3>
+              <p className="text-system-label-secondary text-sm">
+                Bu antrenmanı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
+              </p>
+            </div>
+            <div className="flex border-t border-system-separator/20">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="flex-1 py-4 text-system-blue font-semibold text-[17px] border-r border-system-separator/20 active:bg-system-fill transition-colors"
+              >
+                İptal
+              </button>
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  onDelete(workout.id);
+                }}
+                className="flex-1 py-4 text-system-red font-bold text-[17px] active:bg-system-fill transition-colors"
+              >
+                Sil
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
