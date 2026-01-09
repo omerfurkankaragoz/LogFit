@@ -36,6 +36,14 @@ export interface Workout {
 
 type View = 'calendar' | 'add' | 'details' | 'progress' | 'routines' | 'create_routine' | 'library' | 'profile';
 
+// Navigation items - defined outside component to prevent recreation on every render
+const NAV_ITEMS = [
+  { view: 'calendar' as const, icon: CalendarRange, label: 'Takvim' },
+  { view: 'routines' as const, icon: Radar, label: 'Rutinler' },
+  { view: 'library' as const, icon: LibraryBig, label: 'Kütüphane' },
+  { view: 'progress' as const, icon: LineChart, label: 'İlerleme' },
+];
+
 function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [workouts, setWorkouts] = useState<Workout[]>([]);
@@ -353,11 +361,11 @@ function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-system-background flex flex-col max-w-md mx-auto font-sans antialiased">
-        <header className="sticky top-0 z-20 bg-system-background/80 backdrop-blur-md w-full border-b border-transparent">
+      <div className="min-h-dvh bg-system-background flex flex-col max-w-md mx-auto font-sans antialiased">
+        <header className="sticky top-0 z-20 bg-system-background/80 backdrop-blur-xl w-full border-b border-white/[0.04]">
           <div className="h-[env(safe-area-inset-top)]"></div>
         </header>
-        <main className="flex-1 pb-28 px-4 pt-4">
+        <main className="flex-1 pb-32 px-4 pt-4">
           <CalendarSkeleton />
         </main>
         <BottomNavSkeleton />
@@ -402,40 +410,79 @@ function App() {
   };
 
   const renderBottomNav = () => {
-    const navItems = [
-      { view: 'calendar', icon: CalendarRange, label: 'Takvim' },
-      { view: 'routines', icon: Radar, label: 'Rutinler' },
-      { view: 'library', icon: LibraryBig, label: 'Kütüphane' },
-      { view: 'progress', icon: LineChart, label: 'İlerleme' },
-    ];
     return (
-      <nav className="fixed bottom-0 left-0 right-0 bg-system-background-secondary/90 backdrop-blur-xl border-t border-system-separator z-50">
-        <div className="max-w-md mx-auto flex justify-around px-2 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
-          {navItems.map(item => (
-            <button key={item.view} onClick={() => setCurrentView(item.view as View)} className={`flex flex-col items-center justify-center gap-1 min-w-[44px] min-h-[44px] px-3 py-2 rounded-lg transition-all duration-200 ${currentView === item.view ? 'text-system-blue scale-105' : 'text-system-label-secondary active:text-system-label active:scale-95'}`}>
-              <item.icon size={24} strokeWidth={currentView === item.view ? 2.5 : 2} />
-              <span className="text-[10px] font-medium">{item.label}</span>
-            </button>
-          ))}
+      <nav className="fixed bottom-0 left-0 right-0 z-50">
+        {/* Premium Glassmorphism Background */}
+        <div className="absolute inset-0 bg-gradient-to-t from-system-background-secondary/95 via-system-background-secondary/90 to-system-background-secondary/80 backdrop-blur-2xl border-t border-white/[0.08]" />
+        
+        {/* Navigation Content */}
+        <div className="relative max-w-md mx-auto flex justify-around items-end px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+          {NAV_ITEMS.map(item => {
+            const isActive = currentView === item.view;
+            return (
+              <button 
+                key={item.view}
+                onClick={() => setCurrentView(item.view as View)} 
+                className={`
+                  relative flex flex-col items-center justify-center gap-1.5
+                  min-w-[56px] min-h-[52px] px-4 py-2 rounded-2xl
+                  transition-all duration-300 ease-out
+                  ${isActive 
+                    ? 'text-system-blue' 
+                    : 'text-system-label-tertiary active:text-system-label active:scale-90'
+                  }
+                `}
+              >
+                {/* Active State Background Indicator */}
+                {isActive && (
+                  <motion.div 
+                    layoutId="navIndicator"
+                    className="absolute inset-0 bg-system-blue/10 rounded-2xl"
+                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                  />
+                )}
+                
+                {/* Icon with subtle animation */}
+                <motion.div
+                  animate={{ 
+                    scale: isActive ? 1.1 : 1,
+                    y: isActive ? -2 : 0
+                  }}
+                  transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                >
+                  <item.icon 
+                    size={26} 
+                    strokeWidth={isActive ? 2.5 : 1.8} 
+                  />
+                </motion.div>
+                
+                {/* Label */}
+                <span className={`text-[11px] font-semibold tracking-tight ${isActive ? 'opacity-100' : 'opacity-70'}`}>
+                  {item.label}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </nav>
     );
   };
 
   return (
-    <div className="min-h-screen bg-system-background flex flex-col max-w-md mx-auto font-sans antialiased">
-      <header className="sticky top-0 z-20 bg-system-background/80 backdrop-blur-md w-full border-b border-transparent">
+    <div className="min-h-dvh bg-system-background flex flex-col max-w-md mx-auto font-sans antialiased">
+      {/* Premium Header with Safe Area */}
+      <header className="sticky top-0 z-20 bg-system-background/80 backdrop-blur-xl w-full border-b border-white/[0.04]">
         <div className="h-[env(safe-area-inset-top)]"></div>
       </header>
 
-      <main className="flex-1 pb-28">
+      <main className="flex-1 pb-32">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentView}
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
             className="w-full"
           >
             {renderContent()}
