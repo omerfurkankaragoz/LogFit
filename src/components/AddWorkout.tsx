@@ -442,7 +442,13 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
   };
 
   const handleCancel = () => {
-    if (workoutExercises.length === 0) {
+    // Check if there's any actual data entered (sets with weight or reps > 0)
+    const hasValidData = workoutExercises.some(ex =>
+      ex.sets.some(set => set.weight > 0 || set.reps > 0)
+    );
+
+    // Clear session only if no valid data was entered
+    if (!hasValidData) {
       localStorage.removeItem('currentWorkoutStartTime');
     }
     onCancel();
