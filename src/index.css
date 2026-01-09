@@ -13,6 +13,24 @@ html, body {
     -webkit-tap-highlight-color: transparent;
 }
 
+/* ===== Remove focus outlines on charts (mobile native feel) ===== */
+.recharts-wrapper,
+.recharts-surface,
+.recharts-wrapper *,
+svg,
+svg * {
+    outline: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+}
+
+.recharts-wrapper:focus,
+.recharts-surface:focus,
+.recharts-wrapper:focus-visible,
+.recharts-surface:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
 body {
     background-color: #000000;
     color: rgba(255, 255, 255, 0.85);
