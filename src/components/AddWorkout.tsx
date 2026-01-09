@@ -607,22 +607,6 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
 
       {/* Content */}
       <div className="p-4 space-y-4 pb-28">
-        {/* Favorite Quick-Access Chips */}
-        {favoriteLibraryExercises.length > 0 && (
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
-            <Star size={14} className="text-system-yellow fill-system-yellow flex-shrink-0" />
-            {favoriteLibraryExercises.slice(0, 6).map(ex => (
-              <button
-                key={ex.id}
-                onClick={() => handleAddExerciseToWorkout(ex)}
-                className="flex-shrink-0 px-3 py-1.5 bg-system-yellow/10 text-system-yellow rounded-full text-sm font-medium active:scale-95 transition-transform whitespace-nowrap"
-              >
-                {ex.name.length > 15 ? ex.name.slice(0, 15) + '...' : ex.name}
-              </button>
-            ))}
-          </div>
-        )}
-
         {workoutExercises.length > 0 ? (
           <>
             {WorkoutListSection}
