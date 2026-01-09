@@ -435,7 +435,7 @@ function App() {
         <div className="absolute inset-0 bg-gradient-to-t from-system-background-secondary/95 via-system-background-secondary/90 to-system-background-secondary/80 backdrop-blur-2xl border-t border-white/[0.08]" />
 
         {/* Navigation Content */}
-        <div className="relative max-w-md mx-auto grid grid-cols-4 px-1 pt-1 pb-[calc(0.25rem+env(safe-area-inset-bottom))]">
+        <div className="relative max-w-md mx-auto grid grid-cols-4 px-1 py-1 pb-[env(safe-area-inset-bottom)]">
           {NAV_ITEMS.map(item => {
             const isActive = currentView === item.view;
             return (
