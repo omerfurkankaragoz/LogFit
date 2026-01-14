@@ -1,6 +1,5 @@
 // src/App.tsx
 import React, { useState, useEffect } from 'react';
-import { CalendarRange, Radar, LibraryBig, LineChart } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import WorkoutCalendar from './components/WorkoutCalendar';
 import AddWorkout from './components/AddWorkout';
@@ -15,6 +14,7 @@ import { supabase } from './services/supabaseClient';
 import { Session } from '@supabase/supabase-js';
 import { getAllExercises, Exercise as LibraryExercise } from './services/exerciseApi';
 import { CalendarSkeleton, BottomNavSkeleton } from './components/Skeletons';
+import { Navigation } from './components/Navigation';
 
 export interface Exercise {
   id: string;
@@ -37,12 +37,8 @@ export interface Workout {
 type View = 'calendar' | 'add' | 'details' | 'progress' | 'routines' | 'create_routine' | 'library' | 'profile';
 
 // Navigation items - defined outside component to prevent recreation on every render
-const NAV_ITEMS = [
-  { view: 'calendar' as const, icon: CalendarRange, label: 'Takvim' },
-  { view: 'routines' as const, icon: Radar, label: 'Rutinler' },
-  { view: 'library' as const, icon: LibraryBig, label: 'Kütüphane' },
-  { view: 'progress' as const, icon: LineChart, label: 'İlerleme' },
-];
+
+
 
 // Helper function to get local date string (YYYY-MM-DD) in user's timezone
 // This fixes the issue where toISOString() converts to UTC, causing wrong date at midnight
@@ -437,64 +433,7 @@ function App() {
     }
   };
 
-  const renderBottomNav = () => {
-    return (
-      <nav className="fixed bottom-0 left-0 right-0 z-50">
-        {/* Premium Glassmorphism Background */}
-        <div className="absolute inset-0 bg-gradient-to-t from-system-background-secondary/95 via-system-background-secondary/90 to-system-background-secondary/80 backdrop-blur-2xl border-t border-white/[0.08]" />
 
-        {/* Navigation Content */}
-        <div className="relative max-w-md mx-auto grid grid-cols-4 px-1 py-1 pb-[env(safe-area-inset-bottom)]">
-          {NAV_ITEMS.map(item => {
-            const isActive = currentView === item.view;
-            return (
-              <button
-                key={item.view}
-                onClick={() => setCurrentView(item.view as View)}
-                className={`
-                  relative flex flex-col items-center justify-center gap-0.5
-                  w-full min-h-[44px] py-1 rounded-xl
-                  transition-all duration-300 ease-out
-                  ${isActive
-                    ? 'text-system-blue'
-                    : 'text-system-label-tertiary active:text-system-label active:scale-95'
-                  }
-                `}
-              >
-                {/* Active State Background Indicator */}
-                {isActive && (
-                  <motion.div
-                    layoutId="navIndicator"
-                    className="absolute inset-0 bg-system-blue/10 rounded-2xl"
-                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                  />
-                )}
-
-                {/* Icon with subtle animation */}
-                <motion.div
-                  animate={{
-                    scale: isActive ? 1.1 : 1,
-                    y: isActive ? -2 : 0
-                  }}
-                  transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                >
-                  <item.icon
-                    size={26}
-                    strokeWidth={isActive ? 2.5 : 1.8}
-                  />
-                </motion.div>
-
-                {/* Label */}
-                <span className={`text-[11px] font-semibold tracking-tight ${isActive ? 'opacity-100' : 'opacity-70'}`}>
-                  {item.label}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </nav>
-    );
-  };
 
   return (
     <div className="min-h-dvh bg-system-background flex flex-col max-w-md mx-auto font-sans antialiased">
@@ -518,7 +457,7 @@ function App() {
         </AnimatePresence>
       </main>
 
-      {renderBottomNav()}
+      <Navigation activeTab={currentView} onTabChange={(view) => setCurrentView(view)} />
 
       {/* Finish Workout Confirmation Modal */}
       {confirmFinishModalOpen && (
