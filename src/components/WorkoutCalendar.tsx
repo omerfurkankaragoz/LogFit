@@ -5,6 +5,7 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isTod
 import { tr } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, Dumbbell, PlayCircle, Zap, UserCircle, CheckCircle2, Eye, Activity } from 'lucide-react'; // ArrowLeft kaldırıldı
 import type { Workout } from '../App';
+import { getLocalDateString } from '../App';
 import { Routine } from './RoutinesList';
 
 interface WorkoutCalendarProps {
@@ -30,7 +31,7 @@ const WorkoutCalendar: React.FC<WorkoutCalendarProps> = ({ workouts, routines, o
   const monthDays = eachDayOfInterval({ start: startOfCalendar, end: endOfCalendar });
   const workoutDates = new Set(workouts.map(w => w.date));
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = getLocalDateString();
   const workoutForToday = workouts.find(w => w.date === todayStr);
 
   const last5Workouts = workouts.slice(0, 5);

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback, memo } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Trash2, Search, X, Star, Radar, BadgePlus, Clock } from 'lucide-react';
-import { Workout, Exercise } from '../App';
+import { Workout, Exercise, getLocalDateString } from '../App';
 import { Routine, RoutineExercise } from '../types';
 import { Exercise as LibraryExercise } from '../services/exerciseApi';
 
@@ -223,9 +223,29 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
 
   const [isRoutinePickerOpen, setRoutinePickerOpen] = useState(false);
   const [isExercisePickerOpen, setExercisePickerOpen] = useState(false);
-  const [collapsedExerciseIds, setCollapsedExerciseIds] = useState<Set<string>>(new Set());
+  const [collapsedExerciseIds, setCollapsedExerciseIds] = useState<Set<string>>(() => {
+    // Load collapsed state from localStorage
+    const saved = localStorage.getItem(`workout-collapsed-${date}`);
+    if (saved) {
+      try {
+        return new Set(JSON.parse(saved));
+      } catch {
+        return new Set();
+      }
+    }
+    return new Set();
+  });
   const [exerciseToDelete, setExerciseToDelete] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Get routine name for header
+  const routineName = useMemo(() => {
+    if (workoutRoutineId) {
+      const routine = routines.find(r => Number(r.id) === workoutRoutineId);
+      return routine?.name || null;
+    }
+    return null;
+  }, [workoutRoutineId, routines]);
 
   // --- SAYAÇ STATE'LERİ ---
   const startTimeRef = useRef<string | null>(null);
@@ -241,7 +261,7 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
   }, []);
 
   const isToday = useMemo(() => {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = getLocalDateString();
     return date === todayStr;
   }, [date]);
 
@@ -494,6 +514,8 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
             } else {
               newSet.add(exercise.id);
             }
+            // Save to localStorage
+            localStorage.setItem(`workout-collapsed-${date}`, JSON.stringify([...newSet]));
             return newSet;
           });
         };
@@ -593,7 +615,7 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
 
           {/* Orta Kısım: Başlık ve Sayaç */}
           <div className="flex flex-col items-center">
-            <h1 className="text-[17px] font-semibold text-system-label">Antrenman</h1>
+            <h1 className="text-[17px] font-semibold text-system-label">{routineName || 'Antrenman'}</h1>
             <WorkoutTimer
               startTimeRef={startTimeRef}
               isToday={isToday}

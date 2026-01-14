@@ -44,6 +44,15 @@ const NAV_ITEMS = [
   { view: 'progress' as const, icon: LineChart, label: 'İlerleme' },
 ];
 
+// Helper function to get local date string (YYYY-MM-DD) in user's timezone
+// This fixes the issue where toISOString() converts to UTC, causing wrong date at midnight
+export const getLocalDateString = (date: Date = new Date()): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [workouts, setWorkouts] = useState<Workout[]>([]);
@@ -116,7 +125,7 @@ function App() {
       // --- EKLENDİ: Uygulama açıldığında devam eden antrenman kontrolü ---
       const savedStartTime = localStorage.getItem('currentWorkoutStartTime');
       if (savedStartTime) {
-        const todayStr = new Date().toISOString().split('T')[0];
+        const todayStr = getLocalDateString();
         const workoutForToday = formattedWorkouts.find((w: any) => w.date === todayStr);
 
         setSelectedDate(todayStr);
