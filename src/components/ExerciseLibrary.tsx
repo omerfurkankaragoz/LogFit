@@ -29,6 +29,7 @@ const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({ onExerciseSelect, all
   }, []);
 
   // Create Set for O(1) lookup instead of O(n) with includes()
+  // Note: Set creation is O(n), but beneficial when filtering many exercises
   const favoritesSet = useMemo(() => new Set(favoriteExercises), [favoriteExercises]);
 
   const filteredExercises = useMemo(() => {

@@ -100,7 +100,8 @@ const ProgressCharts: React.FC<{ workouts: Workout[] }> = ({ workouts }) => {
             .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     }, [filteredWorkouts, selectedExercise]);
 
-    // Optimize: Combine nested operations into single pass to reduce complexity from O(n²) to O(n)
+    // Optimize: Combine nested operations into single pass to improve performance
+    // Reduces function call overhead from nested reduce chains
     const generalStats = useMemo(() => {
         return filteredWorkouts
             .map(w => {

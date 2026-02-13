@@ -31,7 +31,7 @@ export const formatBodyPartName = (bodyPart: string): string => {
 /**
  * Format duration in seconds to a human-readable string
  * @param seconds - Duration in seconds
- * @returns Formatted duration string (e.g., "1s 30d" or "45d")
+ * @returns Formatted duration string in Turkish (e.g., "1sa 30dk" means "1 hour 30 minutes", or "45dk" means "45 minutes")
  */
 export const formatDuration = (seconds?: number): string => {
   if (!seconds) return '';
@@ -39,7 +39,7 @@ export const formatDuration = (seconds?: number): string => {
   const m = Math.floor((seconds % 3600) / 60);
   
   if (h > 0) {
-    return `${h}s ${m}d`;
+    return `${h}sa ${m}dk`; // "sa" = saat (hours), "dk" = dakika (minutes) in Turkish
   }
-  return `${m}d`;
+  return `${m}dk`;
 };

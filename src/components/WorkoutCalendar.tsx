@@ -75,7 +75,7 @@ const WorkoutCalendar: React.FC<WorkoutCalendarProps> = ({ workouts, routines, o
     return groups;
   }, [workouts]);
 
-  // Memoize month stats to prevent redundant calculations on every render
+  // Memoize month stats to prevent recalculating workout count and total sets on every render
   const monthStats = useMemo(() => {
     const targetMonth = format(currentMonth, 'yyyy-MM');
     const monthWorkouts = workouts.filter(w => w.date.startsWith(targetMonth));
