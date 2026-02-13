@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Plus, Trash2, Search, GripVertical, Star } from 'lucide-react';
 import { Routine } from './RoutinesList';
 import { Exercise as LibraryExercise } from '../services/exerciseApi';
+import { getImageUrl } from '../utils/formatting';
 import {
   DndContext,
   closestCenter,
@@ -21,9 +22,6 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-
-const SUPABASE_PROJECT_URL = 'https://ekrhekungvoisfughwuz.supabase.co';
-const BUCKET_NAME = 'images';
 
 function SortableExercise({ id, name, onRemove }: { id: string; name: string; onRemove: (id: string) => void; }) {
   const {
@@ -169,12 +167,6 @@ const CreateRoutine: React.FC<CreateRoutineProps> = ({ existingRoutine, onSaveRo
       return;
     }
     onSaveRoutine(existingRoutine?.id || null, routineName, selectedExercises);
-  };
-
-  const getImageUrl = (gifPath: string) => {
-    if (!gifPath) return 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop';
-    const imagePath = gifPath.replace('0.jpg', '1.jpg');
-    return `${SUPABASE_PROJECT_URL}/storage/v1/object/public/${BUCKET_NAME}/exercises/${imagePath}`;
   };
 
   const isSaveDisabled = !routineName.trim() || selectedExercises.length === 0;

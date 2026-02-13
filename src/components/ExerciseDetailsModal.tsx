@@ -3,12 +3,12 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, ChevronDown, ChevronUp, Flame, Wrench, Gauge, Star, AlertTriangle } from 'lucide-react';
 import { Exercise } from '../services/exerciseApi';
+import { formatBodyPartName, getImageUrl } from '../utils/formatting';
 
 interface ExerciseDetailsModalProps {
   exercise: Exercise;
   onClose: () => void;
   onAdd: (exercise: Exercise) => void;
-  getImageUrl: (gifPath: string) => string;
 }
 
 // Helper function to estimate difficulty based on equipment
@@ -88,12 +88,7 @@ const getCommonMistakes = (bodyPart: string): string => {
   return mistakesMap[bodyPart?.toLowerCase()] || 'Hareketi kontrollü yapın, momentum kullanmaktan kaçının ve doğru formu koruyun.';
 };
 
-const formatBodyPartName = (bodyPart: string) => {
-  if (!bodyPart) return 'Other';
-  return bodyPart.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-};
-
-const ExerciseDetailsModal: React.FC<ExerciseDetailsModalProps> = ({ exercise, onClose, onAdd, getImageUrl }) => {
+const ExerciseDetailsModal: React.FC<ExerciseDetailsModalProps> = ({ exercise, onClose, onAdd }) => {
   const [isInstructionsExpanded, setIsInstructionsExpanded] = useState(false);
 
   const difficulty = getDifficulty(exercise.equipment);

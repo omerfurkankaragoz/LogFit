@@ -4,6 +4,7 @@ import { format, parseISO } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { Edit, Trash2, TrendingUp, Calendar as CalendarIcon, ChevronLeft, Clock } from 'lucide-react'; // ArrowLeft yerine ChevronLeft
 import { Workout, Exercise } from '../App';
+import { formatDuration } from '../utils/formatting';
 
 interface WorkoutDetailsProps {
   workout: Workout | undefined;
@@ -32,14 +33,6 @@ const WorkoutDetails: React.FC<WorkoutDetailsProps> = ({
 
   const formatDate = (dateStr: string) => {
     return format(parseISO(dateStr), 'd MMMM yyyy', { locale: tr });
-  };
-
-  const formatDuration = (seconds?: number) => {
-    if (!seconds) return null;
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    if (h > 0) return `${h}sa ${m}dk`;
-    return `${m}dk`;
   };
 
   const getPreviousWorkout = (exerciseName: string) => {

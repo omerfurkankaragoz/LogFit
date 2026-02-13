@@ -3,9 +3,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Search, Star, X, Grid3X3, List, Bookmark } from 'lucide-react';
 import { Exercise, getBodyParts } from '../services/exerciseApi';
 import ExerciseDetailsModal from './ExerciseDetailsModal';
-
-const SUPABASE_PROJECT_URL = 'https://ekrhekungvoisfughwuz.supabase.co';
-const BUCKET_NAME = 'images';
+import { getImageUrl, formatBodyPartName } from '../utils/formatting';
 
 interface ExerciseLibraryProps {
   onExerciseSelect: (exercise: Exercise) => void;
@@ -13,13 +11,6 @@ interface ExerciseLibraryProps {
   favoriteExercises: string[];
   onToggleFavorite: (exerciseId: string) => void;
 }
-
-const formatBodyPartName = (bodyPart: string) => {
-  if (!bodyPart) return 'Other';
-  if (bodyPart === 'all') return 'Tümü';
-  if (bodyPart === 'favorites') return 'Favoriler';
-  return bodyPart.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-};
 
 const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({ onExerciseSelect, allExercises, favoriteExercises, onToggleFavorite }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -37,6 +28,10 @@ const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({ onExerciseSelect, all
     fetchBodyPartsData();
   }, []);
 
+  // Create Set for O(1) lookup instead of O(n) with includes()
+  // Note: Set creation is O(n), but beneficial when filtering many exercises
+  const favoritesSet = useMemo(() => new Set(favoriteExercises), [favoriteExercises]);
+
   const filteredExercises = useMemo(() => {
     let exercises = [...allExercises];
     if (searchQuery.trim()) {
@@ -46,7 +41,8 @@ const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({ onExerciseSelect, all
     }
     if (selectedBodyPart !== 'all') {
       if (selectedBodyPart === 'favorites') {
-        exercises = exercises.filter(ex => favoriteExercises.includes(ex.id));
+        // Use Set.has() for O(1) lookup instead of Array.includes() which is O(n)
+        exercises = exercises.filter(ex => favoritesSet.has(ex.id));
       } else {
         exercises = exercises.filter(ex =>
           ex.bodyPart && ex.bodyPart.toLowerCase() === selectedBodyPart.toLowerCase()
@@ -54,13 +50,7 @@ const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({ onExerciseSelect, all
       }
     }
     return exercises;
-  }, [searchQuery, selectedBodyPart, allExercises, favoriteExercises]);
-
-  const getImageUrl = (gifPath: string) => {
-    if (!gifPath) return 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop';
-    const imagePath = gifPath.replace('0.jpg', '1.jpg');
-    return `${SUPABASE_PROJECT_URL}/storage/v1/object/public/${BUCKET_NAME}/exercises/${imagePath}`;
-  };
+  }, [searchQuery, selectedBodyPart, allExercises, favoritesSet]);
 
   const handleAddExercise = (exercise: Exercise) => {
     onExerciseSelect(exercise);
@@ -253,7 +243,6 @@ const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({ onExerciseSelect, all
           exercise={selectedExercise}
           onClose={() => setSelectedExercise(null)}
           onAdd={handleAddExercise}
-          getImageUrl={getImageUrl}
         />
       )}
     </div>

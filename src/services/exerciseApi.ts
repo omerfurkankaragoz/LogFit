@@ -110,8 +110,16 @@ export const getExercisesByBodyPart = async (bodyPart: string): Promise<Exercise
 
 /**
  * Supabase'deki tüm benzersiz vücut bölgesi kategorilerini döndürür.
+ * Results are cached to avoid redundant database queries.
  */
+let bodyPartsCache: string[] | null = null;
+
 export const getBodyParts = async (): Promise<string[]> => {
+    // Return cached result if available
+    if (bodyPartsCache) {
+        return bodyPartsCache;
+    }
+
     try {
         const { data, error } = await supabase
             .from('exercises_library')
@@ -124,10 +132,18 @@ export const getBodyParts = async (): Promise<string[]> => {
         
         // Gelen verideki tekrar edenleri kaldırıp sıralıyoruz.
         const uniqueParts = [...new Set(data.filter(item => item.body_part).map((item: { body_part: string }) => item.body_part))];
-        return uniqueParts.sort();
+        bodyPartsCache = uniqueParts.sort();
+        return bodyPartsCache;
 
     } catch (error) {
         console.error('API servis hatası:', error);
         return [];
     }
+};
+
+/**
+ * Clear the body parts cache (useful for testing or if data changes)
+ */
+export const clearBodyPartsCache = () => {
+    bodyPartsCache = null;
 };

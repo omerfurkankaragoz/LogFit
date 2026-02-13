@@ -6,8 +6,7 @@ import { Plus, Trash2, Search, X, Star, Radar, BadgePlus, Clock } from 'lucide-r
 import { Workout, Exercise, getLocalDateString } from '../App';
 import { Routine, RoutineExercise } from '../types';
 import { Exercise as LibraryExercise } from '../services/exerciseApi';
-
-const SUPABASE_PROJECT_URL = 'https://ekrhekungvoisfughwuz.supabase.co';
+import { getImageUrl } from '../utils/formatting';
 
 // Timer component - isolated to prevent re-rendering parent
 const WorkoutTimer = memo(({ startTimeRef, isToday, existingDuration }: {
@@ -472,12 +471,6 @@ const AddWorkout: React.FC<AddWorkoutProps> = ({ date, existingWorkout, routines
       localStorage.removeItem('currentWorkoutStartTime');
     }
     onCancel();
-  };
-
-  const getImageUrl = (gifPath: string | undefined) => {
-    if (!gifPath) return 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop';
-    const imagePath = gifPath.replace('0.jpg', '1.jpg');
-    return `${SUPABASE_PROJECT_URL}/storage/v1/object/public/images/exercises/${imagePath}`;
   };
 
   const closeLargeImage = () => {
