@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Plus, Edit, Trash2, ChevronDown, Copy, Radar, Play, ArrowLeft } from 'lucide-react';
 import { Exercise as LibraryExercise } from '../services/exerciseApi';
 import { Routine } from '../types';
+import { getImageUrl } from '../utils/formatting';
 
 // Re-export Routine for backwards compatibility
 export type { Routine } from '../types';
@@ -19,21 +20,11 @@ interface RoutinesListProps {
   onBack: () => void;
 }
 
-const SUPABASE_PROJECT_URL = 'https://ekrhekungvoisfughwuz.supabase.co';
-const BUCKET_NAME = 'images';
-
 const RoutinesList: React.FC<RoutinesListProps> = ({ routines, onAddNewRoutine, onEditRoutine, onDeleteRoutine, onCopyRoutine, allLibraryExercises, onStartWorkout, onBack }) => {
   const [expandedRoutineId, setExpandedRoutineId] = useState<string | null>(null);
 
   const handleCardClick = (routineId: string) => {
     setExpandedRoutineId(expandedRoutineId === routineId ? null : routineId);
-  };
-
-  const getImageUrl = (gifPath: string | undefined) => {
-    const defaultImage = 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop';
-    if (!gifPath) return defaultImage;
-    const imagePath = gifPath.replace('0.jpg', '1.jpg');
-    return `${SUPABASE_PROJECT_URL}/storage/v1/object/public/${BUCKET_NAME}/exercises/${imagePath}`;
   };
 
   return (

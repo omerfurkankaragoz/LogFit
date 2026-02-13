@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight, Dumbbell, PlayCircle, Zap, UserCircle, Check
 import type { Workout } from '../App';
 import { getLocalDateString } from '../App';
 import { Routine } from './RoutinesList';
+import { formatDuration } from '../utils/formatting';
 
 interface WorkoutCalendarProps {
   workouts: Workout[];
@@ -74,6 +75,22 @@ const WorkoutCalendar: React.FC<WorkoutCalendarProps> = ({ workouts, routines, o
     return groups;
   }, [workouts]);
 
+  // Memoize month stats to prevent redundant calculations on every render
+  const monthStats = useMemo(() => {
+    const targetMonth = format(currentMonth, 'yyyy-MM');
+    const monthWorkouts = workouts.filter(w => w.date.startsWith(targetMonth));
+    
+    const totalSets = monthWorkouts.reduce((total, workout) =>
+      total + workout.exercises.reduce((exTotal, exercise) =>
+        exTotal + exercise.sets.length, 0), 0
+    );
+
+    return {
+      workoutCount: monthWorkouts.length,
+      totalSets
+    };
+  }, [workouts, currentMonth]);
+
   const handlePrevMonth = () => {
     setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1));
   };
@@ -93,14 +110,6 @@ const WorkoutCalendar: React.FC<WorkoutCalendarProps> = ({ workouts, routines, o
     } else {
       onStartWorkout();
     }
-  };
-
-  const formatDuration = (seconds?: number) => {
-    if (!seconds) return '';
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    if (h > 0) return `${h}sa ${m}dk`;
-    return `${m}dk`;
   };
 
   const renderWorkoutCard = (workout: Workout) => {
@@ -340,20 +349,13 @@ const WorkoutCalendar: React.FC<WorkoutCalendarProps> = ({ workouts, routines, o
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col items-center justify-center bg-system-background-tertiary/50 p-4 rounded-xl">
               <div className="text-3xl font-bold text-system-blue mb-1">
-                {workouts.filter(w =>
-                  format(parseISO(w.date), 'yyyy-MM') === format(currentMonth, 'yyyy-MM')
-                ).length}
+                {monthStats.workoutCount}
               </div>
               <div className="text-xs font-medium text-system-label-secondary uppercase tracking-wide">Antrenman</div>
             </div>
             <div className="flex flex-col items-center justify-center bg-system-background-tertiary/50 p-4 rounded-xl">
               <div className="text-3xl font-bold text-system-orange mb-1">
-                {workouts.filter(w =>
-                  format(parseISO(w.date), 'yyyy-MM') === format(currentMonth, 'yyyy-MM')
-                ).reduce((total, workout) =>
-                  total + workout.exercises.reduce((exTotal, exercise) =>
-                    exTotal + exercise.sets.length, 0), 0
-                )}
+                {monthStats.totalSets}
               </div>
               <div className="text-xs font-medium text-system-label-secondary uppercase tracking-wide">Toplam Set</div>
             </div>

@@ -100,14 +100,28 @@ const ProgressCharts: React.FC<{ workouts: Workout[] }> = ({ workouts }) => {
             .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     }, [filteredWorkouts, selectedExercise]);
 
+    // Optimize: Combine nested operations into single pass to reduce complexity from O(n²) to O(n)
     const generalStats = useMemo(() => {
         return filteredWorkouts
-            .map(w => ({
-                date: w.date,
-                dateFormatted: format(parseISO(w.date), 'dd MMM', { locale: tr }),
-                totalVolume: w.exercises.reduce((sum, ex) => sum + ex.sets.reduce((exSum, s) => exSum + s.reps * s.weight, 0), 0),
-                totalSets: w.exercises.reduce((sum, ex) => sum + ex.sets.length, 0),
-            }))
+            .map(w => {
+                let totalVolume = 0;
+                let totalSets = 0;
+                
+                // Single pass through exercises and sets
+                w.exercises.forEach(ex => {
+                    totalSets += ex.sets.length;
+                    ex.sets.forEach(s => {
+                        totalVolume += s.reps * s.weight;
+                    });
+                });
+
+                return {
+                    date: w.date,
+                    dateFormatted: format(parseISO(w.date), 'dd MMM', { locale: tr }),
+                    totalVolume,
+                    totalSets,
+                };
+            })
             .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     }, [filteredWorkouts]);
 
